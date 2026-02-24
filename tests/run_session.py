@@ -41,9 +41,9 @@ def main() -> None:
 
 
 def _write_transcript() -> None:
-    """Write a markdown transcript of the session to tests/ directory."""
+    """Write a markdown transcript of the session to tests/data/ directory."""
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-    transcript_path = TESTS_DIR / f"session_{timestamp}.md"
+    transcript_path = DATA_DIR / f"session_{timestamp}.md"
 
     state = load_state(DATA_DIR)
 
