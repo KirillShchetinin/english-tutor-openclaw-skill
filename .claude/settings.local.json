@@ -1,7 +1,13 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git init:*)"
+      "Bash(git init:*)",
+      "Bash(ls:*)",
+      "Bash(python:*)",
+      "Bash(git mv:*)"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\14257\\src\\OpenClaw-Skills\\english-tutor"
     ]
   }
 }

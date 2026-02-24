@@ -1,2 +1,7 @@
 CLAUDE.md
 .claude/
+tests/data/
+tests/.tmp/
+tests/session_*.md
+__pycache__/
+*.pyc
