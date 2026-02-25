@@ -492,7 +492,7 @@ class TestConsoleChannel:
 
         msg = Message(
             type="text",
-            content="\U0001F4DA \u0417\u0430\u043d\u044f\u0442\u0438\u0435 \u0433\u043e\u0442\u043e\u0432\u043e",
+            content="📚 Занятие готово",
         )
         # Should not raise
         asyncio.run(channel.send(msg))

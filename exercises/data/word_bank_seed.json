@@ -1,272 +1,1272 @@
 {
   "greetings": [
-    {"en": "hello", "ru": "\u043f\u0440\u0438\u0432\u0435\u0442", "difficulty": "A1"},
-    {"en": "goodbye", "ru": "\u0434\u043e \u0441\u0432\u0438\u0434\u0430\u043d\u0438\u044f", "difficulty": "A1"},
-    {"en": "good morning", "ru": "\u0434\u043e\u0431\u0440\u043e\u0435 \u0443\u0442\u0440\u043e", "difficulty": "A1"},
-    {"en": "good evening", "ru": "\u0434\u043e\u0431\u0440\u044b\u0439 \u0432\u0435\u0447\u0435\u0440", "difficulty": "A1"},
-    {"en": "good night", "ru": "\u0441\u043f\u043e\u043a\u043e\u0439\u043d\u043e\u0439 \u043d\u043e\u0447\u0438", "difficulty": "A1"},
-    {"en": "please", "ru": "\u043f\u043e\u0436\u0430\u043b\u0443\u0439\u0441\u0442\u0430", "difficulty": "A1"},
-    {"en": "thank you", "ru": "\u0441\u043f\u0430\u0441\u0438\u0431\u043e", "difficulty": "A1"},
-    {"en": "yes", "ru": "\u0434\u0430", "difficulty": "A1"},
-    {"en": "no", "ru": "\u043d\u0435\u0442", "difficulty": "A1"},
-    {"en": "sorry", "ru": "\u0438\u0437\u0432\u0438\u043d\u0438\u0442\u0435", "difficulty": "A1"},
-    {"en": "excuse me", "ru": "\u043f\u0440\u043e\u0441\u0442\u0438\u0442\u0435", "difficulty": "A1"},
-    {"en": "welcome", "ru": "\u0434\u043e\u0431\u0440\u043e \u043f\u043e\u0436\u0430\u043b\u043e\u0432\u0430\u0442\u044c", "difficulty": "A1"},
-    {"en": "how are you", "ru": "\u043a\u0430\u043a \u0434\u0435\u043b\u0430", "difficulty": "A1"},
-    {"en": "nice to meet you", "ru": "\u043e\u0447\u0435\u043d\u044c \u043f\u0440\u0438\u044f\u0442\u043d\u043e", "difficulty": "A1"},
-    {"en": "see you later", "ru": "\u0434\u043e \u0432\u0441\u0442\u0440\u0435\u0447\u0438", "difficulty": "A2"},
-    {"en": "congratulations", "ru": "\u043f\u043e\u0437\u0434\u0440\u0430\u0432\u043b\u044f\u044e", "difficulty": "A2"},
-    {"en": "good afternoon", "ru": "\u0434\u043e\u0431\u0440\u044b\u0439 \u0434\u0435\u043d\u044c", "difficulty": "A1"},
-    {"en": "take care", "ru": "\u0431\u0435\u0440\u0435\u0433\u0438 \u0441\u0435\u0431\u044f", "difficulty": "A2"},
-    {"en": "cheers", "ru": "\u0441\u043f\u0430\u0441\u0438\u0431\u043e", "difficulty": "A2"},
-    {"en": "farewell", "ru": "\u043f\u0440\u043e\u0449\u0430\u0439", "difficulty": "B1"},
-    {"en": "regards", "ru": "\u0441 \u0443\u0432\u0430\u0436\u0435\u043d\u0438\u0435\u043c", "difficulty": "B1"},
-    {"en": "grateful", "ru": "\u0431\u043b\u0430\u0433\u043e\u0434\u0430\u0440\u043d\u044b\u0439", "difficulty": "B1"},
-    {"en": "appreciate", "ru": "\u0446\u0435\u043d\u0438\u0442\u044c", "difficulty": "B1"},
-    {"en": "pleasure", "ru": "\u0443\u0434\u043e\u0432\u043e\u043b\u044c\u0441\u0442\u0432\u0438\u0435", "difficulty": "B1"},
-    {"en": "acquaintance", "ru": "\u0437\u043d\u0430\u043a\u043e\u043c\u044b\u0439", "difficulty": "B2"}
+    {
+      "en": "hello",
+      "ru": "привет",
+      "difficulty": "A1"
+    },
+    {
+      "en": "goodbye",
+      "ru": "до свидания",
+      "difficulty": "A1"
+    },
+    {
+      "en": "good morning",
+      "ru": "доброе утро",
+      "difficulty": "A1"
+    },
+    {
+      "en": "good evening",
+      "ru": "добрый вечер",
+      "difficulty": "A1"
+    },
+    {
+      "en": "good night",
+      "ru": "спокойной ночи",
+      "difficulty": "A1"
+    },
+    {
+      "en": "please",
+      "ru": "пожалуйста",
+      "difficulty": "A1"
+    },
+    {
+      "en": "thank you",
+      "ru": "спасибо",
+      "difficulty": "A1"
+    },
+    {
+      "en": "yes",
+      "ru": "да",
+      "difficulty": "A1"
+    },
+    {
+      "en": "no",
+      "ru": "нет",
+      "difficulty": "A1"
+    },
+    {
+      "en": "sorry",
+      "ru": "извините",
+      "difficulty": "A1"
+    },
+    {
+      "en": "excuse me",
+      "ru": "простите",
+      "difficulty": "A1"
+    },
+    {
+      "en": "welcome",
+      "ru": "добро пожаловать",
+      "difficulty": "A1"
+    },
+    {
+      "en": "how are you",
+      "ru": "как дела",
+      "difficulty": "A1"
+    },
+    {
+      "en": "nice to meet you",
+      "ru": "очень приятно",
+      "difficulty": "A1"
+    },
+    {
+      "en": "see you later",
+      "ru": "до встречи",
+      "difficulty": "A2"
+    },
+    {
+      "en": "congratulations",
+      "ru": "поздравляю",
+      "difficulty": "A2"
+    },
+    {
+      "en": "good afternoon",
+      "ru": "добрый день",
+      "difficulty": "A1"
+    },
+    {
+      "en": "take care",
+      "ru": "береги себя",
+      "difficulty": "A2"
+    },
+    {
+      "en": "cheers",
+      "ru": "спасибо",
+      "difficulty": "A2"
+    },
+    {
+      "en": "farewell",
+      "ru": "прощай",
+      "difficulty": "B1"
+    },
+    {
+      "en": "regards",
+      "ru": "с уважением",
+      "difficulty": "B1"
+    },
+    {
+      "en": "grateful",
+      "ru": "благодарный",
+      "difficulty": "B1"
+    },
+    {
+      "en": "appreciate",
+      "ru": "ценить",
+      "difficulty": "B1"
+    },
+    {
+      "en": "pleasure",
+      "ru": "удовольствие",
+      "difficulty": "B1"
+    },
+    {
+      "en": "acquaintance",
+      "ru": "знакомый",
+      "difficulty": "B2"
+    }
   ],
   "numbers_and_colors": [
-    {"en": "one", "ru": "\u043e\u0434\u0438\u043d", "difficulty": "A1"},
-    {"en": "two", "ru": "\u0434\u0432\u0430", "difficulty": "A1"},
-    {"en": "three", "ru": "\u0442\u0440\u0438", "difficulty": "A1"},
-    {"en": "four", "ru": "\u0447\u0435\u0442\u044b\u0440\u0435", "difficulty": "A1"},
-    {"en": "five", "ru": "\u043f\u044f\u0442\u044c", "difficulty": "A1"},
-    {"en": "ten", "ru": "\u0434\u0435\u0441\u044f\u0442\u044c", "difficulty": "A1"},
-    {"en": "twenty", "ru": "\u0434\u0432\u0430\u0434\u0446\u0430\u0442\u044c", "difficulty": "A1"},
-    {"en": "hundred", "ru": "\u0441\u0442\u043e", "difficulty": "A1"},
-    {"en": "thousand", "ru": "\u0442\u044b\u0441\u044f\u0447\u0430", "difficulty": "A2"},
-    {"en": "zero", "ru": "\u043d\u043e\u043b\u044c", "difficulty": "A1"},
-    {"en": "first", "ru": "\u043f\u0435\u0440\u0432\u044b\u0439", "difficulty": "A1"},
-    {"en": "second", "ru": "\u0432\u0442\u043e\u0440\u043e\u0439", "difficulty": "A1"},
-    {"en": "red", "ru": "\u043a\u0440\u0430\u0441\u043d\u044b\u0439", "difficulty": "A1"},
-    {"en": "blue", "ru": "\u0441\u0438\u043d\u0438\u0439", "difficulty": "A1"},
-    {"en": "green", "ru": "\u0437\u0435\u043b\u0451\u043d\u044b\u0439", "difficulty": "A1"},
-    {"en": "yellow", "ru": "\u0436\u0451\u043b\u0442\u044b\u0439", "difficulty": "A1"},
-    {"en": "black", "ru": "\u0447\u0451\u0440\u043d\u044b\u0439", "difficulty": "A1"},
-    {"en": "white", "ru": "\u0431\u0435\u043b\u044b\u0439", "difficulty": "A1"},
-    {"en": "orange", "ru": "\u043e\u0440\u0430\u043d\u0436\u0435\u0432\u044b\u0439", "difficulty": "A1"},
-    {"en": "pink", "ru": "\u0440\u043e\u0437\u043e\u0432\u044b\u0439", "difficulty": "A1"},
-    {"en": "brown", "ru": "\u043a\u043e\u0440\u0438\u0447\u043d\u0435\u0432\u044b\u0439", "difficulty": "A2"},
-    {"en": "grey", "ru": "\u0441\u0435\u0440\u044b\u0439", "difficulty": "A2"},
-    {"en": "purple", "ru": "\u0444\u0438\u043e\u043b\u0435\u0442\u043e\u0432\u044b\u0439", "difficulty": "A2"},
-    {"en": "million", "ru": "\u043c\u0438\u043b\u043b\u0438\u043e\u043d", "difficulty": "A2"},
-    {"en": "scarlet", "ru": "\u0430\u043b\u044b\u0439", "difficulty": "B2"}
+    {
+      "en": "one",
+      "ru": "один",
+      "difficulty": "A1"
+    },
+    {
+      "en": "two",
+      "ru": "два",
+      "difficulty": "A1"
+    },
+    {
+      "en": "three",
+      "ru": "три",
+      "difficulty": "A1"
+    },
+    {
+      "en": "four",
+      "ru": "четыре",
+      "difficulty": "A1"
+    },
+    {
+      "en": "five",
+      "ru": "пять",
+      "difficulty": "A1"
+    },
+    {
+      "en": "ten",
+      "ru": "десять",
+      "difficulty": "A1"
+    },
+    {
+      "en": "twenty",
+      "ru": "двадцать",
+      "difficulty": "A1"
+    },
+    {
+      "en": "hundred",
+      "ru": "сто",
+      "difficulty": "A1"
+    },
+    {
+      "en": "thousand",
+      "ru": "тысяча",
+      "difficulty": "A2"
+    },
+    {
+      "en": "zero",
+      "ru": "ноль",
+      "difficulty": "A1"
+    },
+    {
+      "en": "first",
+      "ru": "первый",
+      "difficulty": "A1"
+    },
+    {
+      "en": "second",
+      "ru": "второй",
+      "difficulty": "A1"
+    },
+    {
+      "en": "red",
+      "ru": "красный",
+      "difficulty": "A1"
+    },
+    {
+      "en": "blue",
+      "ru": "синий",
+      "difficulty": "A1"
+    },
+    {
+      "en": "green",
+      "ru": "зелёный",
+      "difficulty": "A1"
+    },
+    {
+      "en": "yellow",
+      "ru": "жёлтый",
+      "difficulty": "A1"
+    },
+    {
+      "en": "black",
+      "ru": "чёрный",
+      "difficulty": "A1"
+    },
+    {
+      "en": "white",
+      "ru": "белый",
+      "difficulty": "A1"
+    },
+    {
+      "en": "orange",
+      "ru": "оранжевый",
+      "difficulty": "A1"
+    },
+    {
+      "en": "pink",
+      "ru": "розовый",
+      "difficulty": "A1"
+    },
+    {
+      "en": "brown",
+      "ru": "коричневый",
+      "difficulty": "A2"
+    },
+    {
+      "en": "grey",
+      "ru": "серый",
+      "difficulty": "A2"
+    },
+    {
+      "en": "purple",
+      "ru": "фиолетовый",
+      "difficulty": "A2"
+    },
+    {
+      "en": "million",
+      "ru": "миллион",
+      "difficulty": "A2"
+    },
+    {
+      "en": "scarlet",
+      "ru": "алый",
+      "difficulty": "B2"
+    }
   ],
   "family": [
-    {"en": "mother", "ru": "\u043c\u0430\u043c\u0430", "difficulty": "A1"},
-    {"en": "father", "ru": "\u043f\u0430\u043f\u0430", "difficulty": "A1"},
-    {"en": "brother", "ru": "\u0431\u0440\u0430\u0442", "difficulty": "A1"},
-    {"en": "sister", "ru": "\u0441\u0435\u0441\u0442\u0440\u0430", "difficulty": "A1"},
-    {"en": "son", "ru": "\u0441\u044b\u043d", "difficulty": "A1"},
-    {"en": "daughter", "ru": "\u0434\u043e\u0447\u044c", "difficulty": "A1"},
-    {"en": "family", "ru": "\u0441\u0435\u043c\u044c\u044f", "difficulty": "A1"},
-    {"en": "parents", "ru": "\u0440\u043e\u0434\u0438\u0442\u0435\u043b\u0438", "difficulty": "A1"},
-    {"en": "child", "ru": "\u0440\u0435\u0431\u0451\u043d\u043e\u043a", "difficulty": "A1"},
-    {"en": "baby", "ru": "\u043c\u0430\u043b\u044b\u0448", "difficulty": "A1"},
-    {"en": "husband", "ru": "\u043c\u0443\u0436", "difficulty": "A1"},
-    {"en": "wife", "ru": "\u0436\u0435\u043d\u0430", "difficulty": "A1"},
-    {"en": "grandmother", "ru": "\u0431\u0430\u0431\u0443\u0448\u043a\u0430", "difficulty": "A1"},
-    {"en": "grandfather", "ru": "\u0434\u0435\u0434\u0443\u0448\u043a\u0430", "difficulty": "A1"},
-    {"en": "uncle", "ru": "\u0434\u044f\u0434\u044f", "difficulty": "A2"},
-    {"en": "aunt", "ru": "\u0442\u0451\u0442\u044f", "difficulty": "A2"},
-    {"en": "cousin", "ru": "\u0434\u0432\u043e\u044e\u0440\u043e\u0434\u043d\u044b\u0439 \u0431\u0440\u0430\u0442", "difficulty": "A2"},
-    {"en": "nephew", "ru": "\u043f\u043b\u0435\u043c\u044f\u043d\u043d\u0438\u043a", "difficulty": "A2"},
-    {"en": "niece", "ru": "\u043f\u043b\u0435\u043c\u044f\u043d\u043d\u0438\u0446\u0430", "difficulty": "A2"},
-    {"en": "wedding", "ru": "\u0441\u0432\u0430\u0434\u044c\u0431\u0430", "difficulty": "A2"},
-    {"en": "married", "ru": "\u0436\u0435\u043d\u0430\u0442\u044b\u0439", "difficulty": "A2"},
-    {"en": "divorced", "ru": "\u0440\u0430\u0437\u0432\u0435\u0434\u0451\u043d\u043d\u044b\u0439", "difficulty": "A2"},
-    {"en": "relative", "ru": "\u0440\u043e\u0434\u0441\u0442\u0432\u0435\u043d\u043d\u0438\u043a", "difficulty": "B1"},
-    {"en": "upbringing", "ru": "\u0432\u043e\u0441\u043f\u0438\u0442\u0430\u043d\u0438\u0435", "difficulty": "B2"},
-    {"en": "sibling", "ru": "\u0431\u0440\u0430\u0442 \u0438\u043b\u0438 \u0441\u0435\u0441\u0442\u0440\u0430", "difficulty": "B1"}
+    {
+      "en": "mother",
+      "ru": "мама",
+      "difficulty": "A1"
+    },
+    {
+      "en": "father",
+      "ru": "папа",
+      "difficulty": "A1"
+    },
+    {
+      "en": "brother",
+      "ru": "брат",
+      "difficulty": "A1"
+    },
+    {
+      "en": "sister",
+      "ru": "сестра",
+      "difficulty": "A1"
+    },
+    {
+      "en": "son",
+      "ru": "сын",
+      "difficulty": "A1"
+    },
+    {
+      "en": "daughter",
+      "ru": "дочь",
+      "difficulty": "A1"
+    },
+    {
+      "en": "family",
+      "ru": "семья",
+      "difficulty": "A1"
+    },
+    {
+      "en": "parents",
+      "ru": "родители",
+      "difficulty": "A1"
+    },
+    {
+      "en": "child",
+      "ru": "ребёнок",
+      "difficulty": "A1"
+    },
+    {
+      "en": "baby",
+      "ru": "малыш",
+      "difficulty": "A1"
+    },
+    {
+      "en": "husband",
+      "ru": "муж",
+      "difficulty": "A1"
+    },
+    {
+      "en": "wife",
+      "ru": "жена",
+      "difficulty": "A1"
+    },
+    {
+      "en": "grandmother",
+      "ru": "бабушка",
+      "difficulty": "A1"
+    },
+    {
+      "en": "grandfather",
+      "ru": "дедушка",
+      "difficulty": "A1"
+    },
+    {
+      "en": "uncle",
+      "ru": "дядя",
+      "difficulty": "A2"
+    },
+    {
+      "en": "aunt",
+      "ru": "тётя",
+      "difficulty": "A2"
+    },
+    {
+      "en": "cousin",
+      "ru": "двоюродный брат",
+      "difficulty": "A2"
+    },
+    {
+      "en": "nephew",
+      "ru": "племянник",
+      "difficulty": "A2"
+    },
+    {
+      "en": "niece",
+      "ru": "племянница",
+      "difficulty": "A2"
+    },
+    {
+      "en": "wedding",
+      "ru": "свадьба",
+      "difficulty": "A2"
+    },
+    {
+      "en": "married",
+      "ru": "женатый",
+      "difficulty": "A2"
+    },
+    {
+      "en": "divorced",
+      "ru": "разведённый",
+      "difficulty": "A2"
+    },
+    {
+      "en": "relative",
+      "ru": "родственник",
+      "difficulty": "B1"
+    },
+    {
+      "en": "upbringing",
+      "ru": "воспитание",
+      "difficulty": "B2"
+    },
+    {
+      "en": "sibling",
+      "ru": "брат или сестра",
+      "difficulty": "B1"
+    }
   ],
   "food_and_restaurant": [
-    {"en": "water", "ru": "\u0432\u043e\u0434\u0430", "difficulty": "A1"},
-    {"en": "bread", "ru": "\u0445\u043b\u0435\u0431", "difficulty": "A1"},
-    {"en": "milk", "ru": "\u043c\u043e\u043b\u043e\u043a\u043e", "difficulty": "A1"},
-    {"en": "tea", "ru": "\u0447\u0430\u0439", "difficulty": "A1"},
-    {"en": "coffee", "ru": "\u043a\u043e\u0444\u0435", "difficulty": "A1"},
-    {"en": "meat", "ru": "\u043c\u044f\u0441\u043e", "difficulty": "A1"},
-    {"en": "fish", "ru": "\u0440\u044b\u0431\u0430", "difficulty": "A1"},
-    {"en": "chicken", "ru": "\u043a\u0443\u0440\u0438\u0446\u0430", "difficulty": "A1"},
-    {"en": "rice", "ru": "\u0440\u0438\u0441", "difficulty": "A1"},
-    {"en": "apple", "ru": "\u044f\u0431\u043b\u043e\u043a\u043e", "difficulty": "A1"},
-    {"en": "sugar", "ru": "\u0441\u0430\u0445\u0430\u0440", "difficulty": "A1"},
-    {"en": "salt", "ru": "\u0441\u043e\u043b\u044c", "difficulty": "A1"},
-    {"en": "cheese", "ru": "\u0441\u044b\u0440", "difficulty": "A1"},
-    {"en": "egg", "ru": "\u044f\u0439\u0446\u043e", "difficulty": "A1"},
-    {"en": "soup", "ru": "\u0441\u0443\u043f", "difficulty": "A1"},
-    {"en": "menu", "ru": "\u043c\u0435\u043d\u044e", "difficulty": "A1"},
-    {"en": "restaurant", "ru": "\u0440\u0435\u0441\u0442\u043e\u0440\u0430\u043d", "difficulty": "A1"},
-    {"en": "waiter", "ru": "\u043e\u0444\u0438\u0446\u0438\u0430\u043d\u0442", "difficulty": "A2"},
-    {"en": "bill", "ru": "\u0441\u0447\u0451\u0442", "difficulty": "A2"},
-    {"en": "salad", "ru": "\u0441\u0430\u043b\u0430\u0442", "difficulty": "A1"},
-    {"en": "vegetable", "ru": "\u043e\u0432\u043e\u0449", "difficulty": "A2"},
-    {"en": "fruit", "ru": "\u0444\u0440\u0443\u043a\u0442", "difficulty": "A1"},
-    {"en": "recipe", "ru": "\u0440\u0435\u0446\u0435\u043f\u0442", "difficulty": "A2"},
-    {"en": "dessert", "ru": "\u0434\u0435\u0441\u0441\u0435\u0440\u0442", "difficulty": "A2"},
-    {"en": "cuisine", "ru": "\u043a\u0443\u0445\u043d\u044f", "difficulty": "B2"}
+    {
+      "en": "water",
+      "ru": "вода",
+      "difficulty": "A1"
+    },
+    {
+      "en": "bread",
+      "ru": "хлеб",
+      "difficulty": "A1"
+    },
+    {
+      "en": "milk",
+      "ru": "молоко",
+      "difficulty": "A1"
+    },
+    {
+      "en": "tea",
+      "ru": "чай",
+      "difficulty": "A1"
+    },
+    {
+      "en": "coffee",
+      "ru": "кофе",
+      "difficulty": "A1"
+    },
+    {
+      "en": "meat",
+      "ru": "мясо",
+      "difficulty": "A1"
+    },
+    {
+      "en": "fish",
+      "ru": "рыба",
+      "difficulty": "A1"
+    },
+    {
+      "en": "chicken",
+      "ru": "курица",
+      "difficulty": "A1"
+    },
+    {
+      "en": "rice",
+      "ru": "рис",
+      "difficulty": "A1"
+    },
+    {
+      "en": "apple",
+      "ru": "яблоко",
+      "difficulty": "A1"
+    },
+    {
+      "en": "sugar",
+      "ru": "сахар",
+      "difficulty": "A1"
+    },
+    {
+      "en": "salt",
+      "ru": "соль",
+      "difficulty": "A1"
+    },
+    {
+      "en": "cheese",
+      "ru": "сыр",
+      "difficulty": "A1"
+    },
+    {
+      "en": "egg",
+      "ru": "яйцо",
+      "difficulty": "A1"
+    },
+    {
+      "en": "soup",
+      "ru": "суп",
+      "difficulty": "A1"
+    },
+    {
+      "en": "menu",
+      "ru": "меню",
+      "difficulty": "A1"
+    },
+    {
+      "en": "restaurant",
+      "ru": "ресторан",
+      "difficulty": "A1"
+    },
+    {
+      "en": "waiter",
+      "ru": "официант",
+      "difficulty": "A2"
+    },
+    {
+      "en": "bill",
+      "ru": "счёт",
+      "difficulty": "A2"
+    },
+    {
+      "en": "salad",
+      "ru": "салат",
+      "difficulty": "A1"
+    },
+    {
+      "en": "vegetable",
+      "ru": "овощ",
+      "difficulty": "A2"
+    },
+    {
+      "en": "fruit",
+      "ru": "фрукт",
+      "difficulty": "A1"
+    },
+    {
+      "en": "recipe",
+      "ru": "рецепт",
+      "difficulty": "A2"
+    },
+    {
+      "en": "dessert",
+      "ru": "дессерт",
+      "difficulty": "A2"
+    },
+    {
+      "en": "cuisine",
+      "ru": "кухня",
+      "difficulty": "B2"
+    }
   ],
   "shopping": [
-    {"en": "shop", "ru": "\u043c\u0430\u0433\u0430\u0437\u0438\u043d", "difficulty": "A1"},
-    {"en": "money", "ru": "\u0434\u0435\u043d\u044c\u0433\u0438", "difficulty": "A1"},
-    {"en": "price", "ru": "\u0446\u0435\u043d\u0430", "difficulty": "A1"},
-    {"en": "buy", "ru": "\u043a\u0443\u043f\u0438\u0442\u044c", "difficulty": "A1"},
-    {"en": "sell", "ru": "\u043f\u0440\u043e\u0434\u0430\u0442\u044c", "difficulty": "A2"},
-    {"en": "pay", "ru": "\u043f\u043b\u0430\u0442\u0438\u0442\u044c", "difficulty": "A1"},
-    {"en": "cheap", "ru": "\u0434\u0435\u0448\u0451\u0432\u044b\u0439", "difficulty": "A1"},
-    {"en": "expensive", "ru": "\u0434\u043e\u0440\u043e\u0433\u043e\u0439", "difficulty": "A1"},
-    {"en": "size", "ru": "\u0440\u0430\u0437\u043c\u0435\u0440", "difficulty": "A2"},
-    {"en": "bag", "ru": "\u0441\u0443\u043c\u043a\u0430", "difficulty": "A1"},
-    {"en": "clothes", "ru": "\u043e\u0434\u0435\u0436\u0434\u0430", "difficulty": "A1"},
-    {"en": "shoes", "ru": "\u043e\u0431\u0443\u0432\u044c", "difficulty": "A1"},
-    {"en": "market", "ru": "\u0440\u044b\u043d\u043e\u043a", "difficulty": "A2"},
-    {"en": "cash", "ru": "\u043d\u0430\u043b\u0438\u0447\u043d\u044b\u0435", "difficulty": "A2"},
-    {"en": "card", "ru": "\u043a\u0430\u0440\u0442\u0430", "difficulty": "A1"},
-    {"en": "sale", "ru": "\u0440\u0430\u0441\u043f\u0440\u043e\u0434\u0430\u0436\u0430", "difficulty": "A2"},
-    {"en": "discount", "ru": "\u0441\u043a\u0438\u0434\u043a\u0430", "difficulty": "B1"},
-    {"en": "change", "ru": "\u0441\u0434\u0430\u0447\u0430", "difficulty": "A2"},
-    {"en": "receipt", "ru": "\u0447\u0435\u043a", "difficulty": "B1"},
-    {"en": "customer", "ru": "\u043f\u043e\u043a\u0443\u043f\u0430\u0442\u0435\u043b\u044c", "difficulty": "A2"},
-    {"en": "cost", "ru": "\u0441\u0442\u043e\u0438\u043c\u043e\u0441\u0442\u044c", "difficulty": "A2"},
-    {"en": "try on", "ru": "\u043f\u0440\u0438\u043c\u0435\u0440\u0438\u0442\u044c", "difficulty": "A2"},
-    {"en": "gift", "ru": "\u043f\u043e\u0434\u0430\u0440\u043e\u043a", "difficulty": "A2"},
-    {"en": "refund", "ru": "\u0432\u043e\u0437\u0432\u0440\u0430\u0442", "difficulty": "B1"},
-    {"en": "bargain", "ru": "\u0432\u044b\u0433\u043e\u0434\u043d\u0430\u044f \u043f\u043e\u043a\u0443\u043f\u043a\u0430", "difficulty": "B2"}
+    {
+      "en": "shop",
+      "ru": "магазин",
+      "difficulty": "A1"
+    },
+    {
+      "en": "money",
+      "ru": "деньги",
+      "difficulty": "A1"
+    },
+    {
+      "en": "price",
+      "ru": "цена",
+      "difficulty": "A1"
+    },
+    {
+      "en": "buy",
+      "ru": "купить",
+      "difficulty": "A1"
+    },
+    {
+      "en": "sell",
+      "ru": "продать",
+      "difficulty": "A2"
+    },
+    {
+      "en": "pay",
+      "ru": "платить",
+      "difficulty": "A1"
+    },
+    {
+      "en": "cheap",
+      "ru": "дешёвый",
+      "difficulty": "A1"
+    },
+    {
+      "en": "expensive",
+      "ru": "дорогой",
+      "difficulty": "A1"
+    },
+    {
+      "en": "size",
+      "ru": "размер",
+      "difficulty": "A2"
+    },
+    {
+      "en": "bag",
+      "ru": "сумка",
+      "difficulty": "A1"
+    },
+    {
+      "en": "clothes",
+      "ru": "одежда",
+      "difficulty": "A1"
+    },
+    {
+      "en": "shoes",
+      "ru": "обувь",
+      "difficulty": "A1"
+    },
+    {
+      "en": "market",
+      "ru": "рынок",
+      "difficulty": "A2"
+    },
+    {
+      "en": "cash",
+      "ru": "наличные",
+      "difficulty": "A2"
+    },
+    {
+      "en": "card",
+      "ru": "карта",
+      "difficulty": "A1"
+    },
+    {
+      "en": "sale",
+      "ru": "распродажа",
+      "difficulty": "A2"
+    },
+    {
+      "en": "discount",
+      "ru": "скидка",
+      "difficulty": "B1"
+    },
+    {
+      "en": "change",
+      "ru": "сдача",
+      "difficulty": "A2"
+    },
+    {
+      "en": "receipt",
+      "ru": "чек",
+      "difficulty": "B1"
+    },
+    {
+      "en": "customer",
+      "ru": "покупатель",
+      "difficulty": "A2"
+    },
+    {
+      "en": "cost",
+      "ru": "стоимость",
+      "difficulty": "A2"
+    },
+    {
+      "en": "try on",
+      "ru": "примерить",
+      "difficulty": "A2"
+    },
+    {
+      "en": "gift",
+      "ru": "подарок",
+      "difficulty": "A2"
+    },
+    {
+      "en": "refund",
+      "ru": "возврат",
+      "difficulty": "B1"
+    },
+    {
+      "en": "bargain",
+      "ru": "выгодная покупка",
+      "difficulty": "B2"
+    }
   ],
   "transport": [
-    {"en": "bus", "ru": "\u0430\u0432\u0442\u043e\u0431\u0443\u0441", "difficulty": "A1"},
-    {"en": "car", "ru": "\u043c\u0430\u0448\u0438\u043d\u0430", "difficulty": "A1"},
-    {"en": "train", "ru": "\u043f\u043e\u0435\u0437\u0434", "difficulty": "A1"},
-    {"en": "taxi", "ru": "\u0442\u0430\u043a\u0441\u0438", "difficulty": "A1"},
-    {"en": "plane", "ru": "\u0441\u0430\u043c\u043e\u043b\u0451\u0442", "difficulty": "A1"},
-    {"en": "bicycle", "ru": "\u0432\u0435\u043b\u043e\u0441\u0438\u043f\u0435\u0434", "difficulty": "A1"},
-    {"en": "ticket", "ru": "\u0431\u0438\u043b\u0435\u0442", "difficulty": "A1"},
-    {"en": "station", "ru": "\u0441\u0442\u0430\u043d\u0446\u0438\u044f", "difficulty": "A1"},
-    {"en": "stop", "ru": "\u043e\u0441\u0442\u0430\u043d\u043e\u0432\u043a\u0430", "difficulty": "A1"},
-    {"en": "road", "ru": "\u0434\u043e\u0440\u043e\u0433\u0430", "difficulty": "A1"},
-    {"en": "metro", "ru": "\u043c\u0435\u0442\u0440\u043e", "difficulty": "A1"},
-    {"en": "airport", "ru": "\u0430\u044d\u0440\u043e\u043f\u043e\u0440\u0442", "difficulty": "A1"},
-    {"en": "driver", "ru": "\u0432\u043e\u0434\u0438\u0442\u0435\u043b\u044c", "difficulty": "A2"},
-    {"en": "passenger", "ru": "\u043f\u0430\u0441\u0441\u0430\u0436\u0438\u0440", "difficulty": "A2"},
-    {"en": "ship", "ru": "\u043a\u043e\u0440\u0430\u0431\u043b\u044c", "difficulty": "A2"},
-    {"en": "motorcycle", "ru": "\u043c\u043e\u0442\u043e\u0446\u0438\u043a\u043b", "difficulty": "A2"},
-    {"en": "platform", "ru": "\u043f\u043b\u0430\u0442\u0444\u043e\u0440\u043c\u0430", "difficulty": "A2"},
-    {"en": "seat", "ru": "\u043c\u0435\u0441\u0442\u043e", "difficulty": "A2"},
-    {"en": "departure", "ru": "\u043e\u0442\u043f\u0440\u0430\u0432\u043b\u0435\u043d\u0438\u0435", "difficulty": "B1"},
-    {"en": "arrival", "ru": "\u043f\u0440\u0438\u0431\u044b\u0442\u0438\u0435", "difficulty": "B1"},
-    {"en": "schedule", "ru": "\u0440\u0430\u0441\u043f\u0438\u0441\u0430\u043d\u0438\u0435", "difficulty": "A2"},
-    {"en": "traffic", "ru": "\u0434\u0432\u0438\u0436\u0435\u043d\u0438\u0435", "difficulty": "A2"},
-    {"en": "parking", "ru": "\u043f\u0430\u0440\u043a\u043e\u0432\u043a\u0430", "difficulty": "A2"},
-    {"en": "transfer", "ru": "\u043f\u0435\u0440\u0435\u0441\u0430\u0434\u043a\u0430", "difficulty": "B1"},
-    {"en": "commute", "ru": "\u043f\u043e\u0435\u0437\u0434\u043a\u0430 \u043d\u0430 \u0440\u0430\u0431\u043e\u0442\u0443", "difficulty": "B2"}
+    {
+      "en": "bus",
+      "ru": "автобус",
+      "difficulty": "A1"
+    },
+    {
+      "en": "car",
+      "ru": "машина",
+      "difficulty": "A1"
+    },
+    {
+      "en": "train",
+      "ru": "поезд",
+      "difficulty": "A1"
+    },
+    {
+      "en": "taxi",
+      "ru": "такси",
+      "difficulty": "A1"
+    },
+    {
+      "en": "plane",
+      "ru": "самолёт",
+      "difficulty": "A1"
+    },
+    {
+      "en": "bicycle",
+      "ru": "велосипед",
+      "difficulty": "A1"
+    },
+    {
+      "en": "ticket",
+      "ru": "билет",
+      "difficulty": "A1"
+    },
+    {
+      "en": "station",
+      "ru": "станция",
+      "difficulty": "A1"
+    },
+    {
+      "en": "stop",
+      "ru": "остановка",
+      "difficulty": "A1"
+    },
+    {
+      "en": "road",
+      "ru": "дорога",
+      "difficulty": "A1"
+    },
+    {
+      "en": "metro",
+      "ru": "метро",
+      "difficulty": "A1"
+    },
+    {
+      "en": "airport",
+      "ru": "аэропорт",
+      "difficulty": "A1"
+    },
+    {
+      "en": "driver",
+      "ru": "водитель",
+      "difficulty": "A2"
+    },
+    {
+      "en": "passenger",
+      "ru": "пассажир",
+      "difficulty": "A2"
+    },
+    {
+      "en": "ship",
+      "ru": "корабль",
+      "difficulty": "A2"
+    },
+    {
+      "en": "motorcycle",
+      "ru": "мотоцикл",
+      "difficulty": "A2"
+    },
+    {
+      "en": "platform",
+      "ru": "платформа",
+      "difficulty": "A2"
+    },
+    {
+      "en": "seat",
+      "ru": "место",
+      "difficulty": "A2"
+    },
+    {
+      "en": "departure",
+      "ru": "отправление",
+      "difficulty": "B1"
+    },
+    {
+      "en": "arrival",
+      "ru": "прибытие",
+      "difficulty": "B1"
+    },
+    {
+      "en": "schedule",
+      "ru": "расписание",
+      "difficulty": "A2"
+    },
+    {
+      "en": "traffic",
+      "ru": "движение",
+      "difficulty": "A2"
+    },
+    {
+      "en": "parking",
+      "ru": "парковка",
+      "difficulty": "A2"
+    },
+    {
+      "en": "transfer",
+      "ru": "пересадка",
+      "difficulty": "B1"
+    },
+    {
+      "en": "commute",
+      "ru": "поездка на работу",
+      "difficulty": "B2"
+    }
   ],
   "doctor": [
-    {"en": "doctor", "ru": "\u0432\u0440\u0430\u0447", "difficulty": "A1"},
-    {"en": "hospital", "ru": "\u0431\u043e\u043b\u044c\u043d\u0438\u0446\u0430", "difficulty": "A1"},
-    {"en": "medicine", "ru": "\u043b\u0435\u043a\u0430\u0440\u0441\u0442\u0432\u043e", "difficulty": "A2"},
-    {"en": "sick", "ru": "\u0431\u043e\u043b\u044c\u043d\u043e\u0439", "difficulty": "A1"},
-    {"en": "pain", "ru": "\u0431\u043e\u043b\u044c", "difficulty": "A2"},
-    {"en": "head", "ru": "\u0433\u043e\u043b\u043e\u0432\u0430", "difficulty": "A1"},
-    {"en": "stomach", "ru": "\u0436\u0438\u0432\u043e\u0442", "difficulty": "A2"},
-    {"en": "cold", "ru": "\u043f\u0440\u043e\u0441\u0442\u0443\u0434\u0430", "difficulty": "A1"},
-    {"en": "fever", "ru": "\u0442\u0435\u043c\u043f\u0435\u0440\u0430\u0442\u0443\u0440\u0430", "difficulty": "A2"},
-    {"en": "cough", "ru": "\u043a\u0430\u0448\u0435\u043b\u044c", "difficulty": "A2"},
-    {"en": "pharmacy", "ru": "\u0430\u043f\u0442\u0435\u043a\u0430", "difficulty": "A2"},
-    {"en": "nurse", "ru": "\u043c\u0435\u0434\u0441\u0435\u0441\u0442\u0440\u0430", "difficulty": "A2"},
-    {"en": "ambulance", "ru": "\u0441\u043a\u043e\u0440\u0430\u044f \u043f\u043e\u043c\u043e\u0449\u044c", "difficulty": "A2"},
-    {"en": "help", "ru": "\u043f\u043e\u043c\u043e\u0449\u044c", "difficulty": "A1"},
-    {"en": "tooth", "ru": "\u0437\u0443\u0431", "difficulty": "A1"},
-    {"en": "dentist", "ru": "\u0441\u0442\u043e\u043c\u0430\u0442\u043e\u043b\u043e\u0433", "difficulty": "A2"},
-    {"en": "headache", "ru": "\u0433\u043e\u043b\u043e\u0432\u043d\u0430\u044f \u0431\u043e\u043b\u044c", "difficulty": "A2"},
-    {"en": "pill", "ru": "\u0442\u0430\u0431\u043b\u0435\u0442\u043a\u0430", "difficulty": "A2"},
-    {"en": "allergy", "ru": "\u0430\u043b\u043b\u0435\u0440\u0433\u0438\u044f", "difficulty": "A2"},
-    {"en": "blood", "ru": "\u043a\u0440\u043e\u0432\u044c", "difficulty": "A2"},
-    {"en": "appointment", "ru": "\u043f\u0440\u0438\u0451\u043c", "difficulty": "B1"},
-    {"en": "prescription", "ru": "\u0440\u0435\u0446\u0435\u043f\u0442", "difficulty": "B1"},
-    {"en": "symptom", "ru": "\u0441\u0438\u043c\u043f\u0442\u043e\u043c", "difficulty": "B1"},
-    {"en": "injection", "ru": "\u0443\u043a\u043e\u043b", "difficulty": "B1"},
-    {"en": "diagnosis", "ru": "\u0434\u0438\u0430\u0433\u043d\u043e\u0437", "difficulty": "B2"}
+    {
+      "en": "doctor",
+      "ru": "врач",
+      "difficulty": "A1"
+    },
+    {
+      "en": "hospital",
+      "ru": "больница",
+      "difficulty": "A1"
+    },
+    {
+      "en": "medicine",
+      "ru": "лекарство",
+      "difficulty": "A2"
+    },
+    {
+      "en": "sick",
+      "ru": "больной",
+      "difficulty": "A1"
+    },
+    {
+      "en": "pain",
+      "ru": "боль",
+      "difficulty": "A2"
+    },
+    {
+      "en": "head",
+      "ru": "голова",
+      "difficulty": "A1"
+    },
+    {
+      "en": "stomach",
+      "ru": "живот",
+      "difficulty": "A2"
+    },
+    {
+      "en": "cold",
+      "ru": "простуда",
+      "difficulty": "A1"
+    },
+    {
+      "en": "fever",
+      "ru": "температура",
+      "difficulty": "A2"
+    },
+    {
+      "en": "cough",
+      "ru": "кашель",
+      "difficulty": "A2"
+    },
+    {
+      "en": "pharmacy",
+      "ru": "аптека",
+      "difficulty": "A2"
+    },
+    {
+      "en": "nurse",
+      "ru": "медсестра",
+      "difficulty": "A2"
+    },
+    {
+      "en": "ambulance",
+      "ru": "скорая помощь",
+      "difficulty": "A2"
+    },
+    {
+      "en": "help",
+      "ru": "помощь",
+      "difficulty": "A1"
+    },
+    {
+      "en": "tooth",
+      "ru": "зуб",
+      "difficulty": "A1"
+    },
+    {
+      "en": "dentist",
+      "ru": "стоматолог",
+      "difficulty": "A2"
+    },
+    {
+      "en": "headache",
+      "ru": "головная боль",
+      "difficulty": "A2"
+    },
+    {
+      "en": "pill",
+      "ru": "таблетка",
+      "difficulty": "A2"
+    },
+    {
+      "en": "allergy",
+      "ru": "аллергия",
+      "difficulty": "A2"
+    },
+    {
+      "en": "blood",
+      "ru": "кровь",
+      "difficulty": "A2"
+    },
+    {
+      "en": "appointment",
+      "ru": "приём",
+      "difficulty": "B1"
+    },
+    {
+      "en": "prescription",
+      "ru": "рецепт",
+      "difficulty": "B1"
+    },
+    {
+      "en": "symptom",
+      "ru": "симптом",
+      "difficulty": "B1"
+    },
+    {
+      "en": "injection",
+      "ru": "укол",
+      "difficulty": "B1"
+    },
+    {
+      "en": "diagnosis",
+      "ru": "диагноз",
+      "difficulty": "B2"
+    }
   ],
   "travel": [
-    {"en": "hotel", "ru": "\u0433\u043e\u0441\u0442\u0438\u043d\u0438\u0446\u0430", "difficulty": "A1"},
-    {"en": "passport", "ru": "\u043f\u0430\u0441\u043f\u043e\u0440\u0442", "difficulty": "A1"},
-    {"en": "map", "ru": "\u043a\u0430\u0440\u0442\u0430", "difficulty": "A1"},
-    {"en": "luggage", "ru": "\u0431\u0430\u0433\u0430\u0436", "difficulty": "A2"},
-    {"en": "suitcase", "ru": "\u0447\u0435\u043c\u043e\u0434\u0430\u043d", "difficulty": "A2"},
-    {"en": "trip", "ru": "\u043f\u043e\u0435\u0437\u0434\u043a\u0430", "difficulty": "A1"},
-    {"en": "travel", "ru": "\u043f\u0443\u0442\u0435\u0448\u0435\u0441\u0442\u0432\u0438\u0435", "difficulty": "A1"},
-    {"en": "country", "ru": "\u0441\u0442\u0440\u0430\u043d\u0430", "difficulty": "A1"},
-    {"en": "city", "ru": "\u0433\u043e\u0440\u043e\u0434", "difficulty": "A1"},
-    {"en": "beach", "ru": "\u043f\u043b\u044f\u0436", "difficulty": "A1"},
-    {"en": "museum", "ru": "\u043c\u0443\u0437\u0435\u0439", "difficulty": "A1"},
-    {"en": "tourist", "ru": "\u0442\u0443\u0440\u0438\u0441\u0442", "difficulty": "A2"},
-    {"en": "flight", "ru": "\u0440\u0435\u0439\u0441", "difficulty": "A2"},
-    {"en": "visa", "ru": "\u0432\u0438\u0437\u0430", "difficulty": "A2"},
-    {"en": "reservation", "ru": "\u0431\u0440\u043e\u043d\u0438\u0440\u043e\u0432\u0430\u043d\u0438\u0435", "difficulty": "B1"},
-    {"en": "camera", "ru": "\u0444\u043e\u0442\u043e\u0430\u043f\u043f\u0430\u0440\u0430\u0442", "difficulty": "A1"},
-    {"en": "guide", "ru": "\u0433\u0438\u0434", "difficulty": "A2"},
-    {"en": "border", "ru": "\u0433\u0440\u0430\u043d\u0438\u0446\u0430", "difficulty": "B1"},
-    {"en": "souvenir", "ru": "\u0441\u0443\u0432\u0435\u043d\u0438\u0440", "difficulty": "A2"},
-    {"en": "check-in", "ru": "\u0440\u0435\u0433\u0438\u0441\u0442\u0440\u0430\u0446\u0438\u044f", "difficulty": "A2"},
-    {"en": "check-out", "ru": "\u0432\u044b\u0441\u0435\u043b\u0435\u043d\u0438\u0435", "difficulty": "A2"},
-    {"en": "mountain", "ru": "\u0433\u043e\u0440\u0430", "difficulty": "A1"},
-    {"en": "excursion", "ru": "\u044d\u043a\u0441\u043a\u0443\u0440\u0441\u0438\u044f", "difficulty": "B1"},
-    {"en": "itinerary", "ru": "\u043c\u0430\u0440\u0448\u0440\u0443\u0442", "difficulty": "B2"},
-    {"en": "destination", "ru": "\u043f\u0443\u043d\u043a\u0442 \u043d\u0430\u0437\u043d\u0430\u0447\u0435\u043d\u0438\u044f", "difficulty": "B1"}
+    {
+      "en": "hotel",
+      "ru": "гостиница",
+      "difficulty": "A1"
+    },
+    {
+      "en": "passport",
+      "ru": "паспорт",
+      "difficulty": "A1"
+    },
+    {
+      "en": "map",
+      "ru": "карта",
+      "difficulty": "A1"
+    },
+    {
+      "en": "luggage",
+      "ru": "багаж",
+      "difficulty": "A2"
+    },
+    {
+      "en": "suitcase",
+      "ru": "чемодан",
+      "difficulty": "A2"
+    },
+    {
+      "en": "trip",
+      "ru": "поездка",
+      "difficulty": "A1"
+    },
+    {
+      "en": "travel",
+      "ru": "путешествие",
+      "difficulty": "A1"
+    },
+    {
+      "en": "country",
+      "ru": "страна",
+      "difficulty": "A1"
+    },
+    {
+      "en": "city",
+      "ru": "город",
+      "difficulty": "A1"
+    },
+    {
+      "en": "beach",
+      "ru": "пляж",
+      "difficulty": "A1"
+    },
+    {
+      "en": "museum",
+      "ru": "музей",
+      "difficulty": "A1"
+    },
+    {
+      "en": "tourist",
+      "ru": "турист",
+      "difficulty": "A2"
+    },
+    {
+      "en": "flight",
+      "ru": "рейс",
+      "difficulty": "A2"
+    },
+    {
+      "en": "visa",
+      "ru": "виза",
+      "difficulty": "A2"
+    },
+    {
+      "en": "reservation",
+      "ru": "бронирование",
+      "difficulty": "B1"
+    },
+    {
+      "en": "camera",
+      "ru": "фотоаппарат",
+      "difficulty": "A1"
+    },
+    {
+      "en": "guide",
+      "ru": "гид",
+      "difficulty": "A2"
+    },
+    {
+      "en": "border",
+      "ru": "граница",
+      "difficulty": "B1"
+    },
+    {
+      "en": "souvenir",
+      "ru": "сувенир",
+      "difficulty": "A2"
+    },
+    {
+      "en": "check-in",
+      "ru": "регистрация",
+      "difficulty": "A2"
+    },
+    {
+      "en": "check-out",
+      "ru": "выселение",
+      "difficulty": "A2"
+    },
+    {
+      "en": "mountain",
+      "ru": "гора",
+      "difficulty": "A1"
+    },
+    {
+      "en": "excursion",
+      "ru": "экскурсия",
+      "difficulty": "B1"
+    },
+    {
+      "en": "itinerary",
+      "ru": "маршрут",
+      "difficulty": "B2"
+    },
+    {
+      "en": "destination",
+      "ru": "пункт назначения",
+      "difficulty": "B1"
+    }
   ],
   "small_talk": [
-    {"en": "name", "ru": "\u0438\u043c\u044f", "difficulty": "A1"},
-    {"en": "friend", "ru": "\u0434\u0440\u0443\u0433", "difficulty": "A1"},
-    {"en": "work", "ru": "\u0440\u0430\u0431\u043e\u0442\u0430", "difficulty": "A1"},
-    {"en": "hobby", "ru": "\u0445\u043e\u0431\u0431\u0438", "difficulty": "A1"},
-    {"en": "like", "ru": "\u043d\u0440\u0430\u0432\u0438\u0442\u044c\u0441\u044f", "difficulty": "A1"},
-    {"en": "live", "ru": "\u0436\u0438\u0442\u044c", "difficulty": "A1"},
-    {"en": "happy", "ru": "\u0441\u0447\u0430\u0441\u0442\u043b\u0438\u0432\u044b\u0439", "difficulty": "A1"},
-    {"en": "tired", "ru": "\u0443\u0441\u0442\u0430\u043b\u044b\u0439", "difficulty": "A1"},
-    {"en": "busy", "ru": "\u0437\u0430\u043d\u044f\u0442\u043e\u0439", "difficulty": "A2"},
-    {"en": "free", "ru": "\u0441\u0432\u043e\u0431\u043e\u0434\u043d\u044b\u0439", "difficulty": "A1"},
-    {"en": "interesting", "ru": "\u0438\u043d\u0442\u0435\u0440\u0435\u0441\u043d\u044b\u0439", "difficulty": "A1"},
-    {"en": "beautiful", "ru": "\u043a\u0440\u0430\u0441\u0438\u0432\u044b\u0439", "difficulty": "A1"},
-    {"en": "movie", "ru": "\u0444\u0438\u043b\u044c\u043c", "difficulty": "A1"},
-    {"en": "music", "ru": "\u043c\u0443\u0437\u044b\u043a\u0430", "difficulty": "A1"},
-    {"en": "book", "ru": "\u043a\u043d\u0438\u0433\u0430", "difficulty": "A1"},
-    {"en": "weekend", "ru": "\u0432\u044b\u0445\u043e\u0434\u043d\u044b\u0435", "difficulty": "A1"},
-    {"en": "sport", "ru": "\u0441\u043f\u043e\u0440\u0442", "difficulty": "A1"},
-    {"en": "pet", "ru": "\u0434\u043e\u043c\u0430\u0448\u043d\u0435\u0435 \u0436\u0438\u0432\u043e\u0442\u043d\u043e\u0435", "difficulty": "A2"},
-    {"en": "opinion", "ru": "\u043c\u043d\u0435\u043d\u0438\u0435", "difficulty": "B1"},
-    {"en": "agree", "ru": "\u0441\u043e\u0433\u043b\u0430\u0441\u0438\u0442\u044c\u0441\u044f", "difficulty": "A2"},
-    {"en": "dream", "ru": "\u043c\u0435\u0447\u0442\u0430", "difficulty": "A2"},
-    {"en": "joke", "ru": "\u0448\u0443\u0442\u043a\u0430", "difficulty": "A2"},
-    {"en": "boring", "ru": "\u0441\u043a\u0443\u0447\u043d\u044b\u0439", "difficulty": "A2"},
-    {"en": "conversation", "ru": "\u0440\u0430\u0437\u0433\u043e\u0432\u043e\u0440", "difficulty": "A2"},
-    {"en": "eloquent", "ru": "\u043a\u0440\u0430\u0441\u043d\u043e\u0440\u0435\u0447\u0438\u0432\u044b\u0439", "difficulty": "C1"}
+    {
+      "en": "name",
+      "ru": "имя",
+      "difficulty": "A1"
+    },
+    {
+      "en": "friend",
+      "ru": "друг",
+      "difficulty": "A1"
+    },
+    {
+      "en": "work",
+      "ru": "работа",
+      "difficulty": "A1"
+    },
+    {
+      "en": "hobby",
+      "ru": "хобби",
+      "difficulty": "A1"
+    },
+    {
+      "en": "like",
+      "ru": "нравиться",
+      "difficulty": "A1"
+    },
+    {
+      "en": "live",
+      "ru": "жить",
+      "difficulty": "A1"
+    },
+    {
+      "en": "happy",
+      "ru": "счастливый",
+      "difficulty": "A1"
+    },
+    {
+      "en": "tired",
+      "ru": "усталый",
+      "difficulty": "A1"
+    },
+    {
+      "en": "busy",
+      "ru": "занятой",
+      "difficulty": "A2"
+    },
+    {
+      "en": "free",
+      "ru": "свободный",
+      "difficulty": "A1"
+    },
+    {
+      "en": "interesting",
+      "ru": "интересный",
+      "difficulty": "A1"
+    },
+    {
+      "en": "beautiful",
+      "ru": "красивый",
+      "difficulty": "A1"
+    },
+    {
+      "en": "movie",
+      "ru": "фильм",
+      "difficulty": "A1"
+    },
+    {
+      "en": "music",
+      "ru": "музыка",
+      "difficulty": "A1"
+    },
+    {
+      "en": "book",
+      "ru": "книга",
+      "difficulty": "A1"
+    },
+    {
+      "en": "weekend",
+      "ru": "выходные",
+      "difficulty": "A1"
+    },
+    {
+      "en": "sport",
+      "ru": "спорт",
+      "difficulty": "A1"
+    },
+    {
+      "en": "pet",
+      "ru": "домашнее животное",
+      "difficulty": "A2"
+    },
+    {
+      "en": "opinion",
+      "ru": "мнение",
+      "difficulty": "B1"
+    },
+    {
+      "en": "agree",
+      "ru": "согласиться",
+      "difficulty": "A2"
+    },
+    {
+      "en": "dream",
+      "ru": "мечта",
+      "difficulty": "A2"
+    },
+    {
+      "en": "joke",
+      "ru": "шутка",
+      "difficulty": "A2"
+    },
+    {
+      "en": "boring",
+      "ru": "скучный",
+      "difficulty": "A2"
+    },
+    {
+      "en": "conversation",
+      "ru": "разговор",
+      "difficulty": "A2"
+    },
+    {
+      "en": "eloquent",
+      "ru": "красноречивый",
+      "difficulty": "C1"
+    }
   ],
   "weather": [
-    {"en": "sun", "ru": "\u0441\u043e\u043b\u043d\u0446\u0435", "difficulty": "A1"},
-    {"en": "rain", "ru": "\u0434\u043e\u0436\u0434\u044c", "difficulty": "A1"},
-    {"en": "snow", "ru": "\u0441\u043d\u0435\u0433", "difficulty": "A1"},
-    {"en": "wind", "ru": "\u0432\u0435\u0442\u0435\u0440", "difficulty": "A1"},
-    {"en": "hot", "ru": "\u0436\u0430\u0440\u043a\u043e", "difficulty": "A1"},
-    {"en": "warm", "ru": "\u0442\u0451\u043f\u043b\u043e", "difficulty": "A1"},
-    {"en": "cool", "ru": "\u043f\u0440\u043e\u0445\u043b\u0430\u0434\u043d\u043e", "difficulty": "A2"},
-    {"en": "cloud", "ru": "\u043e\u0431\u043b\u0430\u043a\u043e", "difficulty": "A2"},
-    {"en": "sky", "ru": "\u043d\u0435\u0431\u043e", "difficulty": "A1"},
-    {"en": "weather", "ru": "\u043f\u043e\u0433\u043e\u0434\u0430", "difficulty": "A1"},
-    {"en": "temperature", "ru": "\u0442\u0435\u043c\u043f\u0435\u0440\u0430\u0442\u0443\u0440\u0430", "difficulty": "A2"},
-    {"en": "winter", "ru": "\u0437\u0438\u043c\u0430", "difficulty": "A1"},
-    {"en": "summer", "ru": "\u043b\u0435\u0442\u043e", "difficulty": "A1"},
-    {"en": "spring", "ru": "\u0432\u0435\u0441\u043d\u0430", "difficulty": "A1"},
-    {"en": "autumn", "ru": "\u043e\u0441\u0435\u043d\u044c", "difficulty": "A1"},
-    {"en": "ice", "ru": "\u043b\u0451\u0434", "difficulty": "A1"},
-    {"en": "fog", "ru": "\u0442\u0443\u043c\u0430\u043d", "difficulty": "B1"},
-    {"en": "storm", "ru": "\u0431\u0443\u0440\u044f", "difficulty": "A2"},
-    {"en": "umbrella", "ru": "\u0437\u043e\u043d\u0442", "difficulty": "A2"},
-    {"en": "sunny", "ru": "\u0441\u043e\u043b\u043d\u0435\u0447\u043d\u043e", "difficulty": "A1"},
-    {"en": "cloudy", "ru": "\u043e\u0431\u043b\u0430\u0447\u043d\u043e", "difficulty": "A2"},
-    {"en": "rainy", "ru": "\u0434\u043e\u0436\u0434\u043b\u0438\u0432\u043e", "difficulty": "A2"},
-    {"en": "dry", "ru": "\u0441\u0443\u0445\u043e", "difficulty": "A2"},
-    {"en": "frost", "ru": "\u043c\u043e\u0440\u043e\u0437", "difficulty": "B1"},
-    {"en": "drought", "ru": "\u0437\u0430\u0441\u0443\u0445\u0430", "difficulty": "B2"}
+    {
+      "en": "sun",
+      "ru": "солнце",
+      "difficulty": "A1"
+    },
+    {
+      "en": "rain",
+      "ru": "дождь",
+      "difficulty": "A1"
+    },
+    {
+      "en": "snow",
+      "ru": "снег",
+      "difficulty": "A1"
+    },
+    {
+      "en": "wind",
+      "ru": "ветер",
+      "difficulty": "A1"
+    },
+    {
+      "en": "hot",
+      "ru": "жарко",
+      "difficulty": "A1"
+    },
+    {
+      "en": "warm",
+      "ru": "тёпло",
+      "difficulty": "A1"
+    },
+    {
+      "en": "cool",
+      "ru": "прохладно",
+      "difficulty": "A2"
+    },
+    {
+      "en": "cloud",
+      "ru": "облако",
+      "difficulty": "A2"
+    },
+    {
+      "en": "sky",
+      "ru": "небо",
+      "difficulty": "A1"
+    },
+    {
+      "en": "weather",
+      "ru": "погода",
+      "difficulty": "A1"
+    },
+    {
+      "en": "temperature",
+      "ru": "температура",
+      "difficulty": "A2"
+    },
+    {
+      "en": "winter",
+      "ru": "зима",
+      "difficulty": "A1"
+    },
+    {
+      "en": "summer",
+      "ru": "лето",
+      "difficulty": "A1"
+    },
+    {
+      "en": "spring",
+      "ru": "весна",
+      "difficulty": "A1"
+    },
+    {
+      "en": "autumn",
+      "ru": "осень",
+      "difficulty": "A1"
+    },
+    {
+      "en": "ice",
+      "ru": "лёд",
+      "difficulty": "A1"
+    },
+    {
+      "en": "fog",
+      "ru": "туман",
+      "difficulty": "B1"
+    },
+    {
+      "en": "storm",
+      "ru": "буря",
+      "difficulty": "A2"
+    },
+    {
+      "en": "umbrella",
+      "ru": "зонт",
+      "difficulty": "A2"
+    },
+    {
+      "en": "sunny",
+      "ru": "солнечно",
+      "difficulty": "A1"
+    },
+    {
+      "en": "cloudy",
+      "ru": "облачно",
+      "difficulty": "A2"
+    },
+    {
+      "en": "rainy",
+      "ru": "дождливо",
+      "difficulty": "A2"
+    },
+    {
+      "en": "dry",
+      "ru": "сухо",
+      "difficulty": "A2"
+    },
+    {
+      "en": "frost",
+      "ru": "мороз",
+      "difficulty": "B1"
+    },
+    {
+      "en": "drought",
+      "ru": "засуха",
+      "difficulty": "B2"
+    }
   ]
 }

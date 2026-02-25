@@ -167,12 +167,12 @@ class VocabExercise(Exercise):
         return result[:WORDS_PER_SESSION]
 
     def _format(self, words: list[dict]) -> list[Message]:
-        lines = ["\U0001f4d6 **\u0421\u043b\u043e\u0432\u0430\u0440\u043d\u044b\u0439 \u0437\u0430\u043f\u0430\u0441**", ""]
+        lines = ["📖 **Словарный запас**", ""]
         for i, word in enumerate(words, 1):
-            lines.append(f"{i}. **{word['en']}** \u2014 {word['ru']}")
+            lines.append(f"{i}. **{word['en']}** — {word['ru']}")
         lines.append("")
         lines.append(
-            "\u041f\u043e\u043f\u0440\u043e\u0431\u0443\u0439 \u0432\u0441\u043f\u043e\u043c\u043d\u0438\u0442\u044c \u0430\u043d\u0433\u043b\u0438\u0439\u0441\u043a\u0438\u0435 \u0441\u043b\u043e\u0432\u0430, \u043f\u0440\u0435\u0436\u0434\u0435 \u0447\u0435\u043c \u0447\u0438\u0442\u0430\u0442\u044c \u0438\u0445!"
+            "Попробуй вспомнить английские слова, прежде чем читать их!"
         )
         content = "\n".join(lines)
         return [Message(type="text", content=content, parse_mode="Markdown")]

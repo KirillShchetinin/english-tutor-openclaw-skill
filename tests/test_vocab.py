@@ -428,7 +428,7 @@ class TestFlashcardFormat:
         content = messages[0].content
         assert messages[0].parse_mode == "Markdown"
         assert "**" in content
-        assert "\u2014" in content  # em-dash separator
+        assert "—" in content  # em-dash separator
 
     def test_output_word_count_matches_words_per_session(self, tmp_path):
         """Message contains exactly WORDS_PER_SESSION numbered lines (1. through N.)."""
