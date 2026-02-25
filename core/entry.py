@@ -7,10 +7,11 @@ from pathlib import Path
 from models import Message, ExerciseCompletion
 from channels.base import OutputChannel
 from channels.telegram import TelegramChannel
-from config import MIN_SESSION_GAP_HOURS, ABSENCE_NUDGE_DAYS, PROFILE_REFRESH_INTERVAL
+from config import MIN_SESSION_GAP_HOURS, ABSENCE_NUDGE_DAYS, PROFILE_REFRESH_INTERVAL, set_data_path
 from core.state import load_state, save_state, load_profile, save_profile
 from core.session_builder import build_session
 from core.session_executor import SessionExecutor
+import exercises.vocab  # noqa: F401 — triggers @register_exercise
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +23,7 @@ async def run_session(
 ) -> None:
     if channel is None:
         channel = TelegramChannel()
+    set_data_path(data_path)
     state = load_state(data_path)
     profile = load_profile(data_path)
     now = datetime.now(timezone.utc)
