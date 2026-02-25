@@ -11,7 +11,7 @@ from pathlib import Path
 from models import Message, UserProfile
 from config import get_data_path
 from exercises.base import Exercise
-from core.session_builder import register_exercise
+from exercises.registry import register_exercise
 
 logger = logging.getLogger(__name__)
 

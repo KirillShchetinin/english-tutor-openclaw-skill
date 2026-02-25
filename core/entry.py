@@ -11,7 +11,6 @@ from config import MIN_SESSION_GAP_HOURS, ABSENCE_NUDGE_DAYS, PROFILE_REFRESH_IN
 from core.state import load_state, save_state, load_profile, save_profile
 from core.session_builder import build_session
 from core.session_executor import SessionExecutor
-import exercises.vocab  # noqa: F401 — triggers @register_exercise
 
 logger = logging.getLogger(__name__)
 

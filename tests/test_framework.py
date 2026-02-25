@@ -245,20 +245,22 @@ class TestBuildSession:
     def test_empty_registry_returns_empty_list(self):
         """With no exercises registered, build_session returns []."""
         from core import session_builder
+        from exercises.registry import _registry, override_registry
         from models import SessionState, UserProfile
 
         # Patch the registry to be empty for this test
-        original = session_builder._registry[:]
-        session_builder._registry.clear()
+        original = _registry[:]
+        override_registry([])
         try:
             result = session_builder.build_session(SessionState(), UserProfile())
             assert result == []
         finally:
-            session_builder._registry[:] = original
+            override_registry(original)
 
     def test_registered_exercise_is_instantiated(self):
         from core import session_builder
         from exercises.base import Exercise
+        from exercises.registry import _registry, override_registry
         from models import SessionState, UserProfile, Message
 
         class DummyExercise(Exercise):
@@ -269,15 +271,14 @@ class TestBuildSession:
             async def get_content(self, profile):
                 return []
 
-        original = session_builder._registry[:]
-        session_builder._registry.clear()
-        session_builder._registry.append(DummyExercise)
+        original = _registry[:]
+        override_registry([DummyExercise])
         try:
             result = session_builder.build_session(SessionState(), UserProfile())
             assert len(result) == 1
             assert isinstance(result[0], DummyExercise)
         finally:
-            session_builder._registry[:] = original
+            override_registry(original)
 
 
 # ---------------------------------------------------------------------------
@@ -433,10 +434,10 @@ class TestRunSession:
     def test_no_exercises_sends_message_and_increments(self, tmp_path):
         """With no exercises registered, session still completes and increments counter."""
         from core.entry import run_session
-        from core import session_builder
+        from exercises.registry import _registry, override_registry
 
-        original = session_builder._registry[:]
-        session_builder._registry.clear()
+        original = _registry[:]
+        override_registry([])
         try:
             channel = self._make_channel()
             asyncio.run(run_session(tmp_path, channel=channel, force=True))
@@ -447,7 +448,7 @@ class TestRunSession:
             state = load_state(tmp_path)
             assert state.sessions_completed == 1
         finally:
-            session_builder._registry[:] = original
+            override_registry(original)
 
     def test_absence_nudge_increments_skipped(self, tmp_path):
         """If last session was > ABSENCE_NUDGE_DAYS ago, sends nudge and increments skipped."""
