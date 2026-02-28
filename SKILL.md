@@ -30,6 +30,41 @@ Any object that implements `async send(message: Message) -> None`. Each `Message
 
 | Field | Type | Description |
 |---|---|---|
-| `type` | `str` | Message category (e.g. `"vocab"`, `"grammar"`) |
+| `type` | `str` | Always `"text"` |
 | `content` | `str` | The message body |
 | `parse_mode` | `str` | None | Optional formatting hint (e.g. `"HTML"`) |
+
+## Output Protocol
+
+When invoked with `SkillChannel`, the skill writes tagged lines to stdout. **Only lines starting with `OClaw_SKILL|` are messages for you. Ignore all other output.**
+
+Format: `OClaw_SKILL|<invocation_id>|<json>`
+
+- `invocation_id`: opaque identifier for this run. Ignore it.
+- `json`: a JSON object with a `type` field.
+
+### Message types
+
+| `type` | Action |
+|--------|--------|
+| `done` | Session is complete. If `status` is `"ok"`, confirm to the user: "Урок завершён." If `status` is `"error"`, tell user: "Произошла ошибка, попробуй позже." |
+| `text` | A message for the user. Send the `content` field as-is. Preserve formatting (Markdown/HTML per `parse_mode`). |
+
+### Example output
+
+```
+OClaw_SKILL|a3f1b8c2|{"type":"text","content":"📖 **Словарный запас**\n\n1. **apple** — яблоко","parse_mode":"Markdown"}
+OClaw_SKILL|a3f1b8c2|{"type":"done","status":"ok"}
+```
+
+### Error handling
+
+| Situation | Action |
+|---|---|
+| Process exits without a `done` line | Session crashed. Tell user: "Урок завершился неожиданно. Попробуй позже." |
+| Malformed JSON on a tagged line | Skip that line. Process remaining lines normally. |
+| No tagged lines at all | Treat as error. Same as missing `done`. |
+
+### Environment
+
+Set `PYTHONIOENCODING=utf-8` when invoking the skill.

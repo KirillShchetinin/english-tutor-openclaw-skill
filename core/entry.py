@@ -6,7 +6,7 @@ from pathlib import Path
 
 from models import Message, ExerciseCompletion
 from channels.base import OutputChannel
-from channels.telegram import TelegramChannel
+from channels.telegram import SkillChannel
 from config import MIN_SESSION_GAP_HOURS, ABSENCE_NUDGE_DAYS, PROFILE_REFRESH_INTERVAL, set_data_path
 from core.state import load_state, save_state, load_profile, save_profile
 from core.session_builder import build_session
@@ -21,7 +21,7 @@ async def run_session(
     force: bool = False,
 ) -> None:
     if channel is None:
-        channel = TelegramChannel()
+        channel = SkillChannel()
     set_data_path(data_path)
     state = load_state(data_path)
     profile = load_profile(data_path)
@@ -45,6 +45,7 @@ async def run_session(
                         ),
                     )
                 )
+                await channel.done(status="ok")
                 return
 
             days_since = (now - last).total_seconds() / 86400
@@ -60,6 +61,7 @@ async def run_session(
                 )
                 state.sessions_skipped += 1
                 save_state(data_path, state)
+                await channel.done(status="ok")
                 return
 
     # Build and execute session
@@ -78,35 +80,45 @@ async def run_session(
             )
         )
 
-    executor = SessionExecutor(channel)
-    results = await executor.execute(exercises, profile)
+    try:
+        executor = SessionExecutor(channel)
+        results = await executor.execute(exercises, profile)
 
-    # Update state per-exercise for crash recovery
-    for result in results:
-        if result.success:
-            state.exercise_completions.append(
-                ExerciseCompletion(
-                    exercise_name=result.exercise_name,
-                    completed_at=now.isoformat(),
+        # Update state per-exercise for crash recovery
+        for result in results:
+            if result.success:
+                state.exercise_completions.append(
+                    ExerciseCompletion(
+                        exercise_name=result.exercise_name,
+                        completed_at=now.isoformat(),
+                    )
                 )
+                save_state(data_path, state)
+
+        # Mark session complete
+        state.sessions_completed += 1
+        state.last_completed_at = now.isoformat()
+        save_state(data_path, state)
+
+        # Profile refresh stub (every N sessions)
+        if PROFILE_REFRESH_INTERVAL > 0 and state.sessions_completed % PROFILE_REFRESH_INTERVAL == 0:
+            logger.info(
+                "Profile refresh due (every %d sessions) -- not yet implemented.",
+                PROFILE_REFRESH_INTERVAL,
             )
-            save_state(data_path, state)
 
-    # Mark session complete
-    state.sessions_completed += 1
-    state.last_completed_at = now.isoformat()
-    save_state(data_path, state)
-
-    # Profile refresh stub (every N sessions)
-    if PROFILE_REFRESH_INTERVAL > 0 and state.sessions_completed % PROFILE_REFRESH_INTERVAL == 0:
         logger.info(
-            "Profile refresh due (every %d sessions) -- not yet implemented.",
-            PROFILE_REFRESH_INTERVAL,
+            "Session #%d completed. %d/%d exercises succeeded.",
+            state.sessions_completed,
+            sum(1 for r in results if r.success),
+            len(results),
         )
 
-    logger.info(
-        "Session #%d completed. %d/%d exercises succeeded.",
-        state.sessions_completed,
-        sum(1 for r in results if r.success),
-        len(results),
-    )
+        await channel.done(status="ok")
+    except Exception:
+        logger.error("Session failed", exc_info=True)
+        try:
+            await channel.done(status="error", error="internal_error")
+        except Exception:
+            logger.warning("Failed to send done signal", exc_info=True)
+        raise

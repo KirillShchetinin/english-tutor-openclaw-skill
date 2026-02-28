@@ -23,7 +23,7 @@ class TestMessage:
         plain = Message(type="text", content="Hello")
         assert plain.to_dict() == {"type": "text", "content": "Hello"}
 
-        explicit_none = Message(type="photo", content="url", parse_mode=None)
+        explicit_none = Message(type="text", content="url", parse_mode=None)
         assert "parse_mode" not in explicit_none.to_dict()
 
         markdown = Message(type="text", content="**bold**", parse_mode="Markdown")
