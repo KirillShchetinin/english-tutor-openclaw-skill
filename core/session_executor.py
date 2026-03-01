@@ -29,6 +29,8 @@ class SessionExecutor:
         for exercise in exercises:
             result = await self._run_exercise(exercise, profile)
             results.append(result)
+            if not result.success:
+                break
         return results
 
     async def _run_exercise(

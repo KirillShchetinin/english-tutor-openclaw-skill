@@ -36,11 +36,48 @@ class ExerciseCompletion:
 
 
 @dataclass
+class ExecutionState:
+    """Snapshot of a session that stopped before all exercises completed."""
+    completed_count: int
+    remaining_count: int
+    incomplete_names: list[str]          # all exercises that didn't finish
+    current_exercise_name: str | None    # the one that was running when stopped
+    current_reason: str | None           # RunResult.reason
+    current_stage: tuple[int, int] | None  # RunResult.stage, e.g. (3, 5)
+    current_waiting_for_user: bool       # RunResult.waiting_for_user
+
+    def to_dict(self) -> dict:
+        return {
+            "completed_count": self.completed_count,
+            "remaining_count": self.remaining_count,
+            "incomplete_names": self.incomplete_names,
+            "current_exercise_name": self.current_exercise_name,
+            "current_reason": self.current_reason,
+            "current_stage": list(self.current_stage) if self.current_stage is not None else None,
+            "current_waiting_for_user": self.current_waiting_for_user,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> ExecutionState:
+        raw_stage = data.get("current_stage")
+        return cls(
+            completed_count=data["completed_count"],
+            remaining_count=data["remaining_count"],
+            incomplete_names=data.get("incomplete_names", []),
+            current_exercise_name=data.get("current_exercise_name"),
+            current_reason=data.get("current_reason"),
+            current_stage=tuple(raw_stage) if raw_stage is not None else None,
+            current_waiting_for_user=data.get("current_waiting_for_user", False),
+        )
+
+
+@dataclass
 class SessionState:
     sessions_completed: int = 0
     last_completed_at: str | None = None
     sessions_skipped: int = 0
     exercise_completions: list[ExerciseCompletion] = field(default_factory=list)
+    execution: ExecutionState | None = None
 
     def to_dict(self) -> dict:
         return {
@@ -50,10 +87,12 @@ class SessionState:
             "exercise_completions": [
                 ec.to_dict() for ec in self.exercise_completions
             ],
+            "execution": self.execution.to_dict() if self.execution else None,
         }
 
     @classmethod
     def from_dict(cls, data: dict) -> SessionState:
+        raw_exec = data.get("execution")
         return cls(
             sessions_completed=data.get("sessions_completed", 0),
             last_completed_at=data.get("last_completed_at"),
@@ -62,6 +101,7 @@ class SessionState:
                 ExerciseCompletion.from_dict(ec)
                 for ec in data.get("exercise_completions", [])
             ],
+            execution=ExecutionState.from_dict(raw_exec) if raw_exec else None,
         )
 
 

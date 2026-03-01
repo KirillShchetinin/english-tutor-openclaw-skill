@@ -11,7 +11,7 @@ import io
 from datetime import datetime, timezone, timedelta
 from unittest.mock import patch
 
-from models import Message, SessionState, UserProfile
+from models import Message, SessionState, UserProfile, ExecutionState
 from channels.base import OutputChannel
 from exercises.base import Exercise, RunResult
 from exercises.registry import _registry, override_registry
@@ -124,6 +124,60 @@ class TestSessionExecutor:
         assert len(results) == 3
         assert all(r.success for r in results)
 
+    def test_stops_after_first_failure(self):
+        """Given [success, fail, success], only the first two exercises run;
+        the third is never reached (its message never appears in the channel)."""
+        channel = RecordingChannel()
+
+        ex_a = _make_exercise("ex_a", messages=[Message(type="text", content="from_a")])
+
+        class FailingExercise(Exercise):
+            @property
+            def name(self):
+                return "ex_b"
+
+            async def run(self, ch, profile):
+                await ch.send(Message(type="text", content="from_b"))
+                raise RuntimeError("ex_b exploded")
+
+        ex_b = FailingExercise()
+        ex_c = _make_exercise("ex_c", messages=[Message(type="text", content="from_c")])
+
+        results = asyncio.run(SessionExecutor(channel).execute([ex_a, ex_b, ex_c], UserProfile()))
+
+        # Only two results — executor stopped after ex_b failed
+        assert len(results) == 2
+        assert results[0].exercise_name == "ex_a"
+        assert results[0].success is True
+        assert results[1].exercise_name == "ex_b"
+        assert results[1].success is False
+
+        # ex_c's message was never sent
+        sent_contents = [m.content for m in channel.sent]
+        assert "from_c" not in sent_contents
+
+    def test_stops_on_soft_failure(self):
+        """Exercise returning RunResult(completed=False) causes executor to stop;
+        result has success=False and data.reason equals the RunResult reason."""
+        channel = RecordingChannel()
+
+        class SoftFailExercise(Exercise):
+            @property
+            def name(self):
+                return "soft_fail_ex"
+
+            async def run(self, ch, profile):
+                return RunResult(completed=False, reason="no words")
+
+        ex = SoftFailExercise()
+        results = asyncio.run(SessionExecutor(channel).execute([ex], UserProfile()))
+
+        assert len(results) == 1
+        assert results[0].success is False
+        assert results[0].exercise_name == "soft_fail_ex"
+        assert results[0].data is not None
+        assert results[0].data.reason == "no words"
+
 
 # ---------------------------------------------------------------------------
 # core.entry — guard logic and session flow
@@ -176,6 +230,87 @@ class TestRunSession:
         new_state = load_state(tmp_path)
         assert new_state.sessions_skipped == 1
         assert new_state.sessions_completed == 1
+
+
+# ---------------------------------------------------------------------------
+# core.entry — execution state persistence on early stop / full completion
+# ---------------------------------------------------------------------------
+
+
+class TestRunSessionExecutionState:
+    def test_incomplete_session_saves_execution_state(self, tmp_path):
+        """When an exercise fails, run_session saves ExecutionState and does NOT
+        increment sessions_completed."""
+        from exercises.registry import _registry, override_registry
+
+        class IncompleteExercise(Exercise):
+            @property
+            def name(self):
+                return "incomplete_ex"
+
+            async def run(self, channel, profile):
+                return RunResult(completed=False, reason="waiting", waiting_for_user=True)
+
+        succeeding_ex = _make_exercise("succeeding_ex")
+
+        original = _registry[:]
+        override_registry([IncompleteExercise, type(succeeding_ex)])
+        try:
+            channel = RecordingChannel()
+            asyncio.run(run_session(tmp_path, channel=channel, force=True))
+        finally:
+            override_registry(original)
+
+        state = load_state(tmp_path)
+
+        # sessions_completed must NOT be incremented
+        assert state.sessions_completed == 0
+
+        # execution snapshot must be present
+        assert state.execution is not None
+        exec_state = state.execution
+
+        # incomplete_ex ran and failed; succeeding_ex was never started
+        assert exec_state.completed_count == 0
+        assert exec_state.remaining_count == 2   # incomplete_ex + succeeding_ex both didn't complete
+        assert exec_state.current_exercise_name == "incomplete_ex"
+        assert "incomplete_ex" in exec_state.incomplete_names
+        assert "succeeding_ex" in exec_state.incomplete_names
+
+    def test_complete_session_clears_execution_state(self, tmp_path):
+        """When all exercises succeed, run_session clears execution and increments
+        sessions_completed, even if there was a pre-existing execution snapshot."""
+        from exercises.registry import _registry, override_registry
+
+        # Pre-seed state with a non-None execution
+        pre_existing_execution = ExecutionState(
+            completed_count=0,
+            remaining_count=1,
+            incomplete_names=["old_ex"],
+            current_exercise_name="old_ex",
+            current_reason="leftover",
+            current_stage=None,
+            current_waiting_for_user=False,
+        )
+        save_state(tmp_path, SessionState(
+            sessions_completed=3,
+            execution=pre_existing_execution,
+        ))
+
+        succeeding_ex = _make_exercise("succeeding_ex")
+
+        original = _registry[:]
+        override_registry([type(succeeding_ex)])
+        try:
+            channel = RecordingChannel()
+            asyncio.run(run_session(tmp_path, channel=channel, force=True))
+        finally:
+            override_registry(original)
+
+        state = load_state(tmp_path)
+
+        assert state.execution is None
+        assert state.sessions_completed == 4   # incremented from 3
 
 
 # ---------------------------------------------------------------------------

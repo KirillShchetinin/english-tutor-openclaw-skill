@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import pytest
 
-from models import Message, ExerciseCompletion, SessionState, UserProfile
+from models import Message, ExerciseCompletion, ExecutionState, SessionState, UserProfile
 from core.state import load_state, save_state, load_profile, save_profile
 
 
@@ -152,3 +152,106 @@ class TestStatePersistence:
         (tmp_path / "user_profile.json").write_text("not-json!!!", encoding="utf-8")
         with pytest.raises(RuntimeError, match="Corrupted profile file"):
             load_profile(tmp_path)
+
+
+# ---------------------------------------------------------------------------
+# ExecutionState
+# ---------------------------------------------------------------------------
+
+
+class TestExecutionState:
+    def test_round_trip_with_stage(self):
+        """ExecutionState with a non-None stage serializes and deserializes correctly;
+        stage comes back as a tuple."""
+        es = ExecutionState(
+            completed_count=2,
+            remaining_count=1,
+            incomplete_names=["ex_c", "ex_d"],
+            current_exercise_name="ex_c",
+            current_reason="no words available",
+            current_stage=(3, 5),
+            current_waiting_for_user=True,
+        )
+        restored = ExecutionState.from_dict(es.to_dict())
+
+        assert restored.completed_count == 2
+        assert restored.remaining_count == 1
+        assert restored.incomplete_names == ["ex_c", "ex_d"]
+        assert restored.current_exercise_name == "ex_c"
+        assert restored.current_reason == "no words available"
+        assert restored.current_stage == (3, 5)
+        assert isinstance(restored.current_stage, tuple)
+        assert restored.current_waiting_for_user is True
+
+    def test_round_trip_no_stage(self):
+        """stage=None round-trips as None."""
+        es = ExecutionState(
+            completed_count=0,
+            remaining_count=3,
+            incomplete_names=["ex_a", "ex_b", "ex_c"],
+            current_exercise_name="ex_a",
+            current_reason=None,
+            current_stage=None,
+            current_waiting_for_user=False,
+        )
+        restored = ExecutionState.from_dict(es.to_dict())
+
+        assert restored.current_stage is None
+        assert restored.current_reason is None
+        assert restored.current_waiting_for_user is False
+
+    def test_from_dict_defaults(self):
+        """Missing optional keys get sensible defaults."""
+        # Only required keys are provided
+        es = ExecutionState.from_dict({
+            "completed_count": 1,
+            "remaining_count": 0,
+        })
+
+        assert es.incomplete_names == []
+        assert es.current_exercise_name is None
+        assert es.current_reason is None
+        assert es.current_stage is None
+        assert es.current_waiting_for_user is False
+
+    def test_session_state_round_trip_with_execution(self):
+        """A SessionState with a non-None execution round-trips through to_dict/from_dict."""
+        execution = ExecutionState(
+            completed_count=1,
+            remaining_count=2,
+            incomplete_names=["ex_b", "ex_c"],
+            current_exercise_name="ex_b",
+            current_reason="waiting",
+            current_stage=(1, 3),
+            current_waiting_for_user=True,
+        )
+        state = SessionState(
+            sessions_completed=5,
+            last_completed_at="2026-02-01T12:00:00+00:00",
+            sessions_skipped=0,
+            exercise_completions=[],
+            execution=execution,
+        )
+        restored = SessionState.from_dict(state.to_dict())
+
+        assert restored.sessions_completed == 5
+        assert restored.execution is not None
+        assert restored.execution.completed_count == 1
+        assert restored.execution.remaining_count == 2
+        assert restored.execution.incomplete_names == ["ex_b", "ex_c"]
+        assert restored.execution.current_exercise_name == "ex_b"
+        assert restored.execution.current_reason == "waiting"
+        assert restored.execution.current_stage == (1, 3)
+        assert isinstance(restored.execution.current_stage, tuple)
+        assert restored.execution.current_waiting_for_user is True
+
+    def test_session_state_round_trip_execution_none(self):
+        """execution=None round-trips as None."""
+        state = SessionState(
+            sessions_completed=3,
+            execution=None,
+        )
+        restored = SessionState.from_dict(state.to_dict())
+
+        assert restored.execution is None
+        assert restored.sessions_completed == 3
