@@ -16,6 +16,8 @@ from english_tutor import run_session
 await run_session(data_path)
 ```
 
+Monitor stdout for lines starting with `OClaw_SKILL|` to get messages for the user. See "Output Protocol" below.
+
 ### Parameters
 
 | Parameter | Type | Required | Description |
