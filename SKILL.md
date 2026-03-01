@@ -23,18 +23,6 @@ Monitor stdout for lines starting with `OClaw_SKILL|` to get messages for the us
 | Parameter | Type | Required | Description |
 |---|---|---|---|
 | `data_path` | `Path` | Yes | Directory for persisted learner state |
-| `channel` | `OutputChannel \| None` | No | Override delivery channel (default: `TelegramChannel`) |
-| `force` | `bool` | No | Skip guard checks (default: `False`) |
-
-### `OutputChannel`
-
-Any object that implements `async send(message: Message) -> None`. Each `Message` has:
-
-| Field | Type | Description |
-|---|---|---|
-| `type` | `str` | Always `"text"` |
-| `content` | `str` | The message body |
-| `parse_mode` | `str` | None | Optional formatting hint (e.g. `"HTML"`) |
 
 ## Output Protocol
 
