@@ -4,7 +4,7 @@ import logging
 from dataclasses import dataclass
 
 from models import UserProfile
-from exercises.base import Exercise
+from exercises.base import Exercise, RunResult
 from channels.base import OutputChannel
 from config import EXERCISE_RETRY_ATTEMPTS
 
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 class ExerciseResult:
     exercise_name: str
     success: bool
-    message_count: int = 0
+    data: RunResult | None = None  # set on incomplete runs to record progress
 
 
 class SessionExecutor:
@@ -34,17 +34,21 @@ class SessionExecutor:
     async def _run_exercise(
         self, exercise: Exercise, profile: UserProfile
     ) -> ExerciseResult:
-        """Run single exercise with retry on failure."""
+        """Run single exercise with retry on unexpected failure."""
         attempts = 1 + EXERCISE_RETRY_ATTEMPTS  # 1 original + retries
         for attempt in range(attempts):
             try:
-                messages = await exercise.get_content(profile)
-                for msg in messages:
-                    await self._channel.send(msg)
+                run_result = await exercise.run(self._channel, profile)
+                if run_result.completed:
+                    return ExerciseResult(exercise_name=exercise.name, success=True)
+                # Soft failure: exercise decided it can't complete — respect it, no retry.
+                logger.warning(
+                    "Exercise '%s' did not complete: %s",
+                    exercise.name,
+                    run_result.reason,
+                )
                 return ExerciseResult(
-                    exercise_name=exercise.name,
-                    success=True,
-                    message_count=len(messages),
+                    exercise_name=exercise.name, success=False, data=run_result
                 )
             except Exception:
                 if attempt < attempts - 1:

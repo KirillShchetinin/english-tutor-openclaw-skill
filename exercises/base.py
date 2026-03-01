@@ -1,8 +1,18 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 
-from models import Message, UserProfile
+from channels.base import OutputChannel
+from models import UserProfile
+
+
+@dataclass
+class RunResult:
+    completed: bool
+    reason: str | None = None
+    stage: tuple[int, int] | None = None  # (current, total) e.g. (3, 5)
+    waiting_for_user: bool = False
 
 
 class Exercise(ABC):
@@ -13,6 +23,6 @@ class Exercise(ABC):
         ...
 
     @abstractmethod
-    async def get_content(self, profile: UserProfile) -> list[Message]:
-        """Generate exercise content. Returns list of messages to send."""
+    async def run(self, channel: OutputChannel, profile: UserProfile) -> RunResult:
+        """Run the exercise, sending output via channel. Returns completion result."""
         ...

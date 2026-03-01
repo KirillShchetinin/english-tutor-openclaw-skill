@@ -13,7 +13,7 @@ from unittest.mock import patch
 
 from models import Message, SessionState, UserProfile
 from channels.base import OutputChannel
-from exercises.base import Exercise
+from exercises.base import Exercise, RunResult
 from exercises.registry import _registry, override_registry
 from core.session_executor import SessionExecutor
 from core.entry import run_session
@@ -43,10 +43,12 @@ def _make_exercise(name: str, messages=None, raises=None):
         def name(self_):
             return name
 
-        async def get_content(self_, profile):
+        async def run(self_, channel, profile):
             if raises:
                 raise raises
-            return messages
+            for msg in messages:
+                await channel.send(msg)
+            return RunResult(completed=True)
 
     return E()
 
@@ -71,8 +73,8 @@ class TestBuildSession:
                 def name(self):
                     return "dummy"
 
-                async def get_content(self, profile):
-                    return []
+                async def run(self, channel, profile):
+                    return RunResult(completed=True)
 
             override_registry([DummyExercise])
             result = session_builder.build_session(SessionState(), UserProfile())
@@ -98,7 +100,6 @@ class TestSessionExecutor:
         assert len(results) == 1
         assert results[0].success is True
         assert results[0].exercise_name == "vocab"
-        assert results[0].message_count == 2
         assert len(channel.sent) == 2
         assert channel.sent[0].content == "A"
 

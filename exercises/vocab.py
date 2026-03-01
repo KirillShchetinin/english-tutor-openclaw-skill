@@ -8,9 +8,10 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
+from channels.base import OutputChannel
 from models import Message, UserProfile
 from config import get_data_path
-from exercises.base import Exercise
+from exercises.base import Exercise, RunResult
 from exercises.registry import register_exercise
 
 logger = logging.getLogger(__name__)
@@ -39,26 +40,37 @@ class VocabExercise(Exercise):
     def name(self) -> str:
         return "vocab"
 
-    async def get_content(self, profile: UserProfile) -> list[Message]:
+    async def run(self, channel: OutputChannel, profile: UserProfile) -> RunResult:
         state = self._load_state()
         self._replenish_pool(state)
         words = self._pick_words(state)
 
         if not words:
-            return [
-                Message(
-                    type="text",
-                    content="Словарь пока пуст. Скоро добавим новые слова!",
+            try:
+                await channel.send(
+                    Message(
+                        type="text",
+                        content="Словарь пока пуст. Скоро добавим новые слова!",
+                    )
                 )
-            ]
+            except Exception:
+                logger.exception("Failed to send vocab empty message")
+                return RunResult(completed=False, reason="channel send failed")
+            return RunResult(completed=True)
 
-        messages = self._format(words)
+        try:
+            for msg in self._format(words):
+                await channel.send(msg)
+        except Exception:
+            logger.exception("Failed to send vocab content")
+            return RunResult(completed=False, reason="channel send failed")
+
         try:
             self._update_state(state, words)
             self._save_state(state)
         except Exception:
             logger.exception("Failed to save vocab state; delivering words anyway")
-        return messages
+        return RunResult(completed=True)
 
     def _load_state(self) -> VocabState:
         data_dir = get_data_path() / self.name

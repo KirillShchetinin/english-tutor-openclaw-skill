@@ -6,7 +6,7 @@ from pathlib import Path
 
 from models import Message, ExerciseCompletion
 from channels.base import OutputChannel
-from channels.telegram import SkillChannel
+from channels.skill_channel import SkillChannel
 from config import MIN_SESSION_GAP_HOURS, ABSENCE_NUDGE_DAYS, PROFILE_REFRESH_INTERVAL, set_data_path
 from core.state import load_state, save_state, load_profile, save_profile
 from core.session_builder import build_session
