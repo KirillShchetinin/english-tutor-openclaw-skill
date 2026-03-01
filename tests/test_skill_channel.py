@@ -195,25 +195,6 @@ class TestSkillChannelIntegration:
             assert p["type"] == "text"
             assert "content" in p
 
-    def test_guard_too_soon_emits_done(self, tmp_path):
-        """Guard check (too soon) emits text message followed by done."""
-        save_state(tmp_path, SessionState(
-            sessions_completed=1,
-            last_completed_at=datetime.now(timezone.utc).isoformat(),
-        ))
-
-        channel = SkillChannel()
-        output = _capture_stdout(
-            run_session(tmp_path, channel=channel, force=False)
-        )
-
-        payloads = _parse_tagged_lines(output)
-        assert len(payloads) == 2
-        assert payloads[0]["type"] == "text"
-        assert "рано" in payloads[0]["content"]
-        assert payloads[1]["type"] == "done"
-        assert payloads[1]["status"] == "ok"
-
     def test_empty_session_emits_done(self, tmp_path):
         """Session with no exercises emits message + done with zero counts."""
         original = _registry[:]

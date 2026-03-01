@@ -19,7 +19,7 @@ from exercises.registry import _registry, override_registry
 from core.session_executor import SessionExecutor
 from core.entry import run_session
 from core.state import load_state, save_state
-from config import ABSENCE_NUDGE_DAYS, MIN_SESSION_GAP_HOURS
+from config import ABSENCE_NUDGE_DAYS
 
 
 # ---------------------------------------------------------------------------
@@ -240,19 +240,6 @@ class TestRunSession:
         asyncio.run(run_session(tmp_path, channel=channel, force=True))
         assert load_state(tmp_path).sessions_completed == 1
 
-    def test_too_soon_guard_blocks_run(self, tmp_path):
-        """Second run within MIN_SESSION_GAP_HOURS without --force should skip."""
-        save_state(tmp_path, SessionState(
-            sessions_completed=1,
-            last_completed_at=datetime.now(timezone.utc).isoformat(),
-        ))
-
-        channel = RecordingChannel()
-        asyncio.run(run_session(tmp_path, channel=channel, force=False))
-
-        assert len(channel.sent) == 1
-        assert load_state(tmp_path).sessions_completed == 1
-
     def test_no_exercises_sends_message_and_increments(self, tmp_path):
         """With no exercises registered, session still completes and increments counter."""
         channel = RecordingChannel()
@@ -314,6 +301,34 @@ class TestRunSessionExecutionState:
         assert exec_state.current_exercise_name == "incomplete_ex"
         assert "incomplete_ex" in exec_state.incomplete_names
         assert "succeeding_ex" in exec_state.incomplete_names
+
+    def test_stale_execution_cleared_before_new_session(self, tmp_path):
+        """When run_session starts and state already has an execution snapshot
+        (e.g. from a previous session waiting for user input), the stale
+        execution is cleared before the new session runs."""
+        stale_execution = ExecutionState(
+            completed_count=0,
+            remaining_count=1,
+            incomplete_names=["old_interactive_ex"],
+            current_exercise_name="old_interactive_ex",
+            current_reason="waiting",
+            current_stage=None,
+            current_waiting_for_user=True,
+        )
+        save_state(tmp_path, SessionState(
+            sessions_completed=2,
+            execution=stale_execution,
+        ))
+
+        channel = RecordingChannel()
+        with _registry_override([_SucceedingExercise]):
+            asyncio.run(run_session(tmp_path, channel=channel, force=True))
+
+        state = load_state(tmp_path)
+
+        # Stale execution cleared, new session completed normally
+        assert state.execution is None
+        assert state.sessions_completed == 3  # incremented from 2
 
     def test_complete_session_clears_execution_state(self, tmp_path):
         """When all exercises succeed, run_session clears execution and increments
@@ -484,30 +499,11 @@ class TestBuildExecutionStateMidSession:
 
 
 # ---------------------------------------------------------------------------
-# core.entry — guard boundary and naive-timestamp handling
+# core.entry — naive-timestamp handling
 # ---------------------------------------------------------------------------
 
 
-class TestGuardBoundary:
-    def test_exactly_at_gap_threshold_passes_through(self, tmp_path):
-        """A session timestamp exactly MIN_SESSION_GAP_HOURS in the past must NOT
-        trigger the too-soon guard (boundary condition: >= means allow)."""
-        exactly_at_boundary = datetime.now(timezone.utc) - timedelta(
-            hours=MIN_SESSION_GAP_HOURS
-        )
-        save_state(tmp_path, SessionState(
-            sessions_completed=1,
-            last_completed_at=exactly_at_boundary.isoformat(),
-        ))
-
-        channel = RecordingChannel()
-        with _registry_override([]):
-            asyncio.run(run_session(tmp_path, channel=channel, force=False))
-
-        # No too-soon message; session ran and completed
-        state = load_state(tmp_path)
-        assert state.sessions_completed == 2
-
+class TestNaiveTimestamp:
     def test_naive_timestamp_in_state_does_not_raise(self, tmp_path):
         """A last_completed_at stored without timezone info (naive ISO string) must
         be handled gracefully — not raise TypeError on comparison."""

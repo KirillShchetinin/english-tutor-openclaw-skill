@@ -7,7 +7,7 @@ from pathlib import Path
 from models import Message, ExerciseCompletion, ExecutionState
 from channels.base import OutputChannel
 from channels.skill_channel import SkillChannel
-from config import MIN_SESSION_GAP_HOURS, ABSENCE_NUDGE_DAYS, PROFILE_REFRESH_INTERVAL, set_data_path
+from config import ABSENCE_NUDGE_DAYS, PROFILE_REFRESH_INTERVAL, set_data_path
 from core.state import load_state, save_state, load_profile, save_profile
 from core.session_builder import build_session
 from core.session_executor import SessionExecutor, ExerciseResult
@@ -35,22 +35,6 @@ def _build_execution_state(
         current_waiting_for_user=run_result.waiting_for_user if run_result else False,
     )
 
-
-async def _check_too_soon(hours_since: float, channel: OutputChannel) -> bool:
-    """Send a 'too soon' message and signal done. Returns True if session should stop."""
-    if hours_since >= MIN_SESSION_GAP_HOURS:
-        return False
-    await channel.send(
-        Message(
-            type="text",
-            content=(
-                "⏳ Слишком рано для нового занятия. "
-                "Отдохни немного, скоро продолжим!"
-            ),
-        )
-    )
-    await channel.done(status="ok")
-    return True
 
 
 async def _check_long_absence(
@@ -104,14 +88,23 @@ async def run_session(
     profile = load_profile(data_path)
     now = datetime.now(timezone.utc)
 
+    # Clear stale execution state from a previous session that was waiting
+    # for user input.  A push (run_session) always starts fresh.
+    if state.execution is not None:
+        logger.info(
+            "Clearing stale execution state (exercise='%s', waiting=%s).",
+            state.execution.current_exercise_name,
+            state.execution.current_waiting_for_user,
+        )
+        state.execution = None
+        save_state(data_path, state)
+
     # Guard checks (skip if --force)
     if not force and state.last_completed_at:
         last = datetime.fromisoformat(state.last_completed_at)
         if last.tzinfo is None:
             last = last.replace(tzinfo=timezone.utc)
         elapsed = now - last
-        if await _check_too_soon(elapsed.total_seconds() / 3600, channel):
-            return
         if await _check_long_absence(elapsed.total_seconds() / 86400, data_path, state, channel):
             return
 
