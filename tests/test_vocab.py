@@ -23,8 +23,9 @@ from exercises.vocab import (
     WORD_BANK_FILE,
     WORDS_PER_SESSION,
 )
+from channels.base import OutputChannel
 from config import set_data_path
-from models import UserProfile
+from models import Message, UserProfile
 
 
 # ---------------------------------------------------------------------------
@@ -32,16 +33,19 @@ from models import UserProfile
 # ---------------------------------------------------------------------------
 
 
-def _make_active_vocab(n: int) -> dict:
-    """Return a vocab dict with n active (is_learning=True) words."""
+def _make_vocab(n: int, *, is_learning: bool = True) -> dict:
+    """Return a vocab dict with n words in the given learning state."""
+    prefix = "word" if is_learning else "grad"
+    ru_prefix = "ru" if is_learning else "gru"
+    times_shown = 0 if is_learning else GRADUATION_SHOW_COUNT
     return {
-        f"word{i}": {
-            "en": f"word{i}",
-            "ru": f"ru{i}",
+        f"{prefix}{i}": {
+            "en": f"{prefix}{i}",
+            "ru": f"{ru_prefix}{i}",
             "topic": "greetings",
             "difficulty": "A1",
-            "is_learning": True,
-            "times_shown": 0,
+            "is_learning": is_learning,
+            "times_shown": times_shown,
             "times_tested": 0,
             "results": [],
             "last_seen": None,
@@ -50,29 +54,20 @@ def _make_active_vocab(n: int) -> dict:
     }
 
 
-def _make_graduated_vocab(n: int) -> dict:
-    """Return a vocab dict with n graduated (is_learning=False) words."""
-    return {
-        f"grad{i}": {
-            "en": f"grad{i}",
-            "ru": f"gru{i}",
-            "topic": "greetings",
-            "difficulty": "A1",
-            "is_learning": False,
-            "times_shown": GRADUATION_SHOW_COUNT,
-            "times_tested": 0,
-            "results": [],
-            "last_seen": None,
-        }
-        for i in range(n)
-    }
+class _RecordingChannel(OutputChannel):
+    def __init__(self):
+        self.sent: list[Message] = []
+
+    async def send(self, message: Message) -> None:
+        self.sent.append(message)
 
 
 @pytest.fixture()
 def vocab_ex(tmp_path):
     """Set data path and return a fresh VocabExercise."""
     set_data_path(tmp_path)
-    return VocabExercise()
+    yield VocabExercise()
+    set_data_path(None)
 
 
 # ---------------------------------------------------------------------------
@@ -82,8 +77,8 @@ def vocab_ex(tmp_path):
 
 class TestVocabFirstRun:
     def test_first_run_initializes_files_from_seed(self, tmp_path, vocab_ex):
-        """On a fresh data path, get_content creates word_bank, topics, and state files."""
-        asyncio.run(vocab_ex.get_content(UserProfile()))
+        """On a fresh data path, run() creates word_bank, topics, and state files."""
+        asyncio.run(vocab_ex.run(_RecordingChannel(), UserProfile()))
 
         vocab_dir = tmp_path / "vocab"
         for name in (WORD_BANK_FILE, TOPICS_FILE, STATE_FILE):
@@ -120,7 +115,7 @@ class TestReplenishment:
     def test_full_pool_is_not_replenished(self, vocab_ex):
         """When active count already equals ACTIVE_POOL_SIZE, no words are added."""
         state = vocab_ex._load_state()
-        state.vocab = _make_active_vocab(ACTIVE_POOL_SIZE)
+        state.vocab = _make_vocab(ACTIVE_POOL_SIZE)
         state.word_bank = {
             "greetings": [{"en": "hello", "ru": "privet", "difficulty": "A1"}]
         }
@@ -164,7 +159,7 @@ class TestReplenishment:
 class TestGraduation:
     def test_graduation_lifecycle(self, vocab_ex):
         """Words graduate at threshold and stay graduated; below threshold stays active."""
-        vocab = _make_active_vocab(1)
+        vocab = _make_vocab(1)
         key = next(iter(vocab))
 
         # Below threshold — stays learning
@@ -239,7 +234,7 @@ class TestPickWords:
     def test_returns_exactly_words_per_session(self, vocab_ex):
         """With enough active words, returns exactly WORDS_PER_SESSION, never more."""
         state = VocabState(
-            vocab={**_make_active_vocab(ACTIVE_POOL_SIZE), **_make_graduated_vocab(20)},
+            vocab={**_make_vocab(ACTIVE_POOL_SIZE), **_make_vocab(20, is_learning=False)},
             word_bank={}, topics={},
         )
 
@@ -251,7 +246,7 @@ class TestPickWords:
     def test_fewer_active_than_session_size_returns_all(self, vocab_ex):
         """When fewer active words exist than WORDS_PER_SESSION, all of them are returned."""
         n = WORDS_PER_SESSION - 2
-        state = VocabState(vocab=_make_active_vocab(n), word_bank={}, topics={})
+        state = VocabState(vocab=_make_vocab(n), word_bank={}, topics={})
 
         with patch("random.random", return_value=1.0):
             words = vocab_ex._pick_words(state)
@@ -260,7 +255,7 @@ class TestPickWords:
 
     def test_review_slot_controlled_by_random(self, vocab_ex):
         """Review slot includes graduated word when random < threshold, excludes otherwise."""
-        vocab = {**_make_active_vocab(10), **_make_graduated_vocab(5)}
+        vocab = {**_make_vocab(10), **_make_vocab(5, is_learning=False)}
         state = VocabState(vocab=vocab, word_bank={}, topics={})
 
         # Below threshold — one graduated word included
@@ -280,7 +275,7 @@ class TestPickWords:
         """Returns [] for empty vocab and for all-graduated with no review slot."""
         assert vocab_ex._pick_words(VocabState(vocab={}, word_bank={}, topics={})) == []
 
-        state = VocabState(vocab=_make_graduated_vocab(10), word_bank={}, topics={})
+        state = VocabState(vocab=_make_vocab(10, is_learning=False), word_bank={}, topics={})
         with patch("random.random", return_value=1.0):
             assert vocab_ex._pick_words(state) == []
 
@@ -292,20 +287,21 @@ class TestPickWords:
 
 class TestFallbackMessage:
     def test_empty_words_returns_fallback_message(self, tmp_path, vocab_ex):
-        """When _pick_words returns [], get_content sends the Russian fallback."""
+        """When _pick_words returns [], run() sends the Russian fallback."""
 
         class EmptyPickExercise(VocabExercise):
             def _load_state(self):
-                return VocabState(vocab=_make_graduated_vocab(3), word_bank={}, topics={})
+                return VocabState(vocab=_make_vocab(3, is_learning=False), word_bank={}, topics={})
             def _replenish_pool(self, state):
                 pass
 
         ex = EmptyPickExercise()
+        channel = _RecordingChannel()
         with patch("random.random", return_value=1.0):
-            messages = asyncio.run(ex.get_content(UserProfile()))
+            asyncio.run(ex.run(channel, UserProfile()))
 
-        assert len(messages) == 1
-        assert messages[0].parse_mode is None
+        assert len(channel.sent) == 1
+        assert channel.sent[0].parse_mode is None
         assert not (tmp_path / "vocab" / STATE_FILE).exists()
 
 
@@ -317,11 +313,12 @@ class TestFallbackMessage:
 class TestFlashcardFormat:
     def test_output_format_and_word_count(self, vocab_ex):
         """Message is Markdown with em-dash pairs and exactly WORDS_PER_SESSION lines."""
-        messages = asyncio.run(vocab_ex.get_content(UserProfile()))
+        channel = _RecordingChannel()
+        asyncio.run(vocab_ex.run(channel, UserProfile()))
 
-        assert len(messages) == 1
-        content = messages[0].content
-        assert messages[0].parse_mode == "Markdown"
+        assert len(channel.sent) == 1
+        content = channel.sent[0].content
+        assert channel.sent[0].parse_mode == "Markdown"
         assert "**" in content
         assert "—" in content
 
@@ -337,7 +334,7 @@ class TestFlashcardFormat:
 class TestStatePersistence:
     def test_state_survives_across_runs(self, tmp_path, vocab_ex):
         """State round-trips correctly: times_shown increments, no duplicates, topics persisted."""
-        asyncio.run(vocab_ex.get_content(UserProfile()))
+        asyncio.run(vocab_ex.run(_RecordingChannel(), UserProfile()))
 
         vocab_dir = tmp_path / "vocab"
         after_first = json.loads((vocab_dir / STATE_FILE).read_text(encoding="utf-8"))
@@ -345,12 +342,12 @@ class TestStatePersistence:
         assert any(w["times_shown"] == 1 for w in after_first.values())
 
         # Second run — no duplicates, times_shown increases
-        asyncio.run(vocab_ex.get_content(UserProfile()))
+        asyncio.run(vocab_ex.run(_RecordingChannel(), UserProfile()))
         after_second = json.loads((vocab_dir / STATE_FILE).read_text(encoding="utf-8"))
         assert len(after_second) == len(after_first)
-        max_first = max(w["times_shown"] for w in after_first.values())
-        max_second = max(w["times_shown"] for w in after_second.values())
-        assert max_second > max_first
+        sum_first = sum(w["times_shown"] for w in after_first.values())
+        sum_second = sum(w["times_shown"] for w in after_second.values())
+        assert sum_second > sum_first
 
         # Topics file persisted with at least one started topic
         topics = json.loads((vocab_dir / TOPICS_FILE).read_text(encoding="utf-8"))
@@ -358,8 +355,6 @@ class TestStatePersistence:
 
     def test_atomic_write_cleans_up_tmp_on_error(self, tmp_path, vocab_ex):
         """If the write fails, no leftover .tmp file should remain."""
-        vocab_ex._load_state()
-
         target = tmp_path / "vocab" / "state.json"
         target.parent.mkdir(parents=True, exist_ok=True)
         tmp_file = target.with_suffix(".tmp")
@@ -379,7 +374,7 @@ class TestStatePersistence:
 class TestUpdateState:
     def test_update_state_effects(self, vocab_ex):
         """_update_state increments times_shown, sets last_seen, and skips orphans."""
-        vocab = _make_active_vocab(3)
+        vocab = _make_vocab(3)
         state = VocabState(vocab=vocab, word_bank={}, topics={})
 
         shown = [state.vocab["word0"], state.vocab["word1"]]

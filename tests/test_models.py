@@ -7,6 +7,7 @@ Run from the english-tutor directory:
 from __future__ import annotations
 
 import pytest
+from unittest.mock import patch
 
 from models import Message, ExerciseCompletion, ExecutionState, SessionState, UserProfile
 from core.state import load_state, save_state, load_profile, save_profile
@@ -152,6 +153,19 @@ class TestStatePersistence:
         (tmp_path / "user_profile.json").write_text("not-json!!!", encoding="utf-8")
         with pytest.raises(RuntimeError, match="Corrupted profile file"):
             load_profile(tmp_path)
+
+    def test_save_state_atomic_write_cleans_up_tmp_on_error(self, tmp_path):
+        """If save_state's rename step fails, the .tmp file is removed and the
+        exception is re-raised — no half-written tmp file is left behind."""
+        state = SessionState(sessions_completed=1)
+        tmp_file = tmp_path / "session_state.tmp"
+
+        with patch("pathlib.Path.replace", side_effect=OSError("disk full")):
+            with pytest.raises(OSError):
+                save_state(tmp_path, state)
+
+        assert not tmp_file.exists()
+
 
 
 # ---------------------------------------------------------------------------

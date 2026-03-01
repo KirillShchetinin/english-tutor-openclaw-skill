@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import io
+from contextlib import contextmanager
 from datetime import datetime, timezone, timedelta
 from unittest.mock import patch
 
@@ -18,7 +19,7 @@ from exercises.registry import _registry, override_registry
 from core.session_executor import SessionExecutor
 from core.entry import run_session
 from core.state import load_state, save_state
-from config import ABSENCE_NUDGE_DAYS
+from config import ABSENCE_NUDGE_DAYS, MIN_SESSION_GAP_HOURS
 
 
 # ---------------------------------------------------------------------------
@@ -29,9 +30,13 @@ from config import ABSENCE_NUDGE_DAYS
 class RecordingChannel(OutputChannel):
     def __init__(self):
         self.sent: list[Message] = []
+        self.done_statuses: list[str] = []
 
     async def send(self, message: Message) -> None:
         self.sent.append(message)
+
+    async def done(self, status: str = "ok", **_kwargs) -> None:
+        self.done_statuses.append(status)
 
 
 def _make_exercise(name: str, messages=None, raises=None):
@@ -53,6 +58,26 @@ def _make_exercise(name: str, messages=None, raises=None):
     return E()
 
 
+class _SucceedingExercise(Exercise):
+    @property
+    def name(self):
+        return "succeeding_ex"
+
+    async def run(self, channel, profile):
+        await channel.send(Message(type="text", content="hello"))
+        return RunResult(completed=True)
+
+
+@contextmanager
+def _registry_override(classes: list):
+    original = _registry[:]
+    override_registry(classes)
+    try:
+        yield
+    finally:
+        override_registry(original)
+
+
 # ---------------------------------------------------------------------------
 # core.session_builder
 # ---------------------------------------------------------------------------
@@ -63,9 +88,7 @@ class TestBuildSession:
         """Empty registry returns []; registered exercise is instantiated."""
         from core import session_builder
 
-        original = _registry[:]
-        try:
-            override_registry([])
+        with _registry_override([]):
             assert session_builder.build_session(SessionState(), UserProfile()) == []
 
             class DummyExercise(Exercise):
@@ -80,6 +103,33 @@ class TestBuildSession:
             result = session_builder.build_session(SessionState(), UserProfile())
             assert len(result) == 1
             assert isinstance(result[0], DummyExercise)
+
+
+# ---------------------------------------------------------------------------
+# exercises.registry — idempotent registration
+# ---------------------------------------------------------------------------
+
+
+class TestRegistry:
+    def test_register_exercise_is_idempotent(self):
+        """Registering the same class twice must leave it in the registry exactly once."""
+        from exercises.registry import register_exercise, get_registry, override_registry
+
+        class OneOffExercise(Exercise):
+            @property
+            def name(self):
+                return "one_off"
+
+            async def run(self, channel, profile):
+                return RunResult(completed=True)
+
+        original = get_registry()
+        try:
+            override_registry([])
+            register_exercise(OneOffExercise)
+            register_exercise(OneOffExercise)  # second call — must be a no-op
+            registry = get_registry()
+            assert registry.count(OneOffExercise) == 1
         finally:
             override_registry(original)
 
@@ -205,15 +255,11 @@ class TestRunSession:
 
     def test_no_exercises_sends_message_and_increments(self, tmp_path):
         """With no exercises registered, session still completes and increments counter."""
-        original = _registry[:]
-        override_registry([])
-        try:
-            channel = RecordingChannel()
+        channel = RecordingChannel()
+        with _registry_override([]):
             asyncio.run(run_session(tmp_path, channel=channel, force=True))
-            assert len(channel.sent) == 1
-            assert load_state(tmp_path).sessions_completed == 1
-        finally:
-            override_registry(original)
+        assert len(channel.sent) == 1
+        assert load_state(tmp_path).sessions_completed == 1
 
     def test_absence_nudge_increments_skipped(self, tmp_path):
         """If last session was > ABSENCE_NUDGE_DAYS ago, sends nudge and increments skipped."""
@@ -241,8 +287,6 @@ class TestRunSessionExecutionState:
     def test_incomplete_session_saves_execution_state(self, tmp_path):
         """When an exercise fails, run_session saves ExecutionState and does NOT
         increment sessions_completed."""
-        from exercises.registry import _registry, override_registry
-
         class IncompleteExercise(Exercise):
             @property
             def name(self):
@@ -251,15 +295,9 @@ class TestRunSessionExecutionState:
             async def run(self, channel, profile):
                 return RunResult(completed=False, reason="waiting", waiting_for_user=True)
 
-        succeeding_ex = _make_exercise("succeeding_ex")
-
-        original = _registry[:]
-        override_registry([IncompleteExercise, type(succeeding_ex)])
-        try:
-            channel = RecordingChannel()
+        channel = RecordingChannel()
+        with _registry_override([IncompleteExercise, _SucceedingExercise]):
             asyncio.run(run_session(tmp_path, channel=channel, force=True))
-        finally:
-            override_registry(original)
 
         state = load_state(tmp_path)
 
@@ -297,15 +335,9 @@ class TestRunSessionExecutionState:
             execution=pre_existing_execution,
         ))
 
-        succeeding_ex = _make_exercise("succeeding_ex")
-
-        original = _registry[:]
-        override_registry([type(succeeding_ex)])
-        try:
-            channel = RecordingChannel()
+        channel = RecordingChannel()
+        with _registry_override([_SucceedingExercise]):
             asyncio.run(run_session(tmp_path, channel=channel, force=True))
-        finally:
-            override_registry(original)
 
         state = load_state(tmp_path)
 
@@ -334,3 +366,235 @@ class TestConsoleChannel:
         output = buf.getvalue().decode("utf-8")
         assert "[TEXT]" in output
         assert "Занятие готово" in output
+
+
+# ---------------------------------------------------------------------------
+# core.session_executor — retry behavior
+# ---------------------------------------------------------------------------
+
+
+class TestSessionExecutorRetry:
+    def test_retries_on_exception_and_succeeds(self):
+        """An exercise that raises on the first attempt but succeeds on the retry
+        should return success=True. EXERCISE_RETRY_ATTEMPTS=1 gives 2 total attempts."""
+        call_count = 0
+
+        class FlakyExercise(Exercise):
+            @property
+            def name(self):
+                return "flaky"
+
+            async def run(self, channel, profile):
+                nonlocal call_count
+                call_count += 1
+                if call_count == 1:
+                    raise RuntimeError("transient error")
+                await channel.send(Message(type="text", content="recovered"))
+                return RunResult(completed=True)
+
+        channel = RecordingChannel()
+        results = asyncio.run(
+            SessionExecutor(channel).execute([FlakyExercise()], UserProfile())
+        )
+
+        assert call_count == 2, "exercise must be called twice (original + 1 retry)"
+        assert results[0].success is True
+        assert len(channel.sent) == 1
+        assert channel.sent[0].content == "recovered"
+
+    def test_exhausted_retries_returns_failure(self):
+        """An exercise that raises on every attempt (original + all retries) must
+        ultimately return success=False with no data (hard failure path)."""
+        call_count = 0
+
+        class AlwaysRaisesExercise(Exercise):
+            @property
+            def name(self):
+                return "always_fails"
+
+            async def run(self, channel, profile):
+                nonlocal call_count
+                call_count += 1
+                raise RuntimeError("permanent failure")
+
+        channel = RecordingChannel()
+        results = asyncio.run(
+            SessionExecutor(channel).execute([AlwaysRaisesExercise()], UserProfile())
+        )
+
+        # 1 original attempt + 1 retry = 2 (EXERCISE_RETRY_ATTEMPTS = 1)
+        assert call_count == 2
+        assert results[0].success is False
+        # Hard failure (exception path) stores no RunResult data
+        assert results[0].data is None
+
+
+# ---------------------------------------------------------------------------
+# core.entry — execution state shape for mid-session failure
+# ---------------------------------------------------------------------------
+
+
+class TestBuildExecutionStateMidSession:
+    def test_mid_session_failure_has_correct_counts_and_names(self, tmp_path):
+        """When the second of three exercises fails, completed_count=1,
+        remaining_count=2, and incomplete_names contains the failed exercise plus
+        the unstarted one."""
+
+        class AlwaysSucceeds(Exercise):
+            @property
+            def name(self):
+                return "ex_first"
+
+            async def run(self, channel, profile):
+                await channel.send(Message(type="text", content="ok"))
+                return RunResult(completed=True)
+
+        class AlwaysFails(Exercise):
+            @property
+            def name(self):
+                return "ex_second"
+
+            async def run(self, channel, profile):
+                return RunResult(completed=False, reason="mid fail")
+
+        class NeverRan(Exercise):
+            @property
+            def name(self):
+                return "ex_third"
+
+            async def run(self, channel, profile):
+                return RunResult(completed=True)
+
+        channel = RecordingChannel()
+        with _registry_override([AlwaysSucceeds, AlwaysFails, NeverRan]):
+            asyncio.run(run_session(tmp_path, channel=channel, force=True))
+
+        state = load_state(tmp_path)
+
+        assert state.sessions_completed == 0
+        assert state.execution is not None
+        exec_state = state.execution
+        assert exec_state.completed_count == 1
+        assert exec_state.remaining_count == 2
+        assert exec_state.current_exercise_name == "ex_second"
+        assert exec_state.current_reason == "mid fail"
+        assert "ex_second" in exec_state.incomplete_names
+        assert "ex_third" in exec_state.incomplete_names
+        assert "ex_first" not in exec_state.incomplete_names
+
+
+# ---------------------------------------------------------------------------
+# core.entry — guard boundary and naive-timestamp handling
+# ---------------------------------------------------------------------------
+
+
+class TestGuardBoundary:
+    def test_exactly_at_gap_threshold_passes_through(self, tmp_path):
+        """A session timestamp exactly MIN_SESSION_GAP_HOURS in the past must NOT
+        trigger the too-soon guard (boundary condition: >= means allow)."""
+        exactly_at_boundary = datetime.now(timezone.utc) - timedelta(
+            hours=MIN_SESSION_GAP_HOURS
+        )
+        save_state(tmp_path, SessionState(
+            sessions_completed=1,
+            last_completed_at=exactly_at_boundary.isoformat(),
+        ))
+
+        channel = RecordingChannel()
+        with _registry_override([]):
+            asyncio.run(run_session(tmp_path, channel=channel, force=False))
+
+        # No too-soon message; session ran and completed
+        state = load_state(tmp_path)
+        assert state.sessions_completed == 2
+
+    def test_naive_timestamp_in_state_does_not_raise(self, tmp_path):
+        """A last_completed_at stored without timezone info (naive ISO string) must
+        be handled gracefully — not raise TypeError on comparison."""
+        # Store a naive ISO timestamp (no +00:00 suffix)
+        naive_ts = datetime.now(timezone.utc).replace(tzinfo=None)
+        save_state(tmp_path, SessionState(
+            sessions_completed=1,
+            last_completed_at=naive_ts.isoformat(),
+        ))
+
+        channel = RecordingChannel()
+        with _registry_override([]):
+            # This would raise TypeError if entry.py did not handle the naive case
+            asyncio.run(run_session(tmp_path, channel=channel, force=False))
+
+        # Either guard triggered or session completed — no exception is the assertion
+        state = load_state(tmp_path)
+        assert state.sessions_completed >= 1
+
+
+# ---------------------------------------------------------------------------
+# core.entry — exception path emits error done signal
+# ---------------------------------------------------------------------------
+
+
+class TestRunSessionExceptionPath:
+    def test_unexpected_exception_emits_error_done(self, tmp_path):
+        """When an unhandled exception escapes executor.execute(), run_session
+        calls channel.done(status='error') and then re-raises."""
+        class BombExercise(Exercise):
+            @property
+            def name(self):
+                return "bomb"
+
+            async def run(self, channel, profile):
+                raise RuntimeError("unexpected bomb")
+
+        channel = RecordingChannel()
+        # With EXERCISE_RETRY_ATTEMPTS=1 the executor retries once, then returns
+        # failure; run_session itself does NOT re-raise for exercise failures.
+        # To hit the outer except we need the executor itself to crash — patch it.
+        with _registry_override([BombExercise]):
+            with patch(
+                "core.entry.SessionExecutor.execute",
+                side_effect=RuntimeError("executor exploded"),
+            ):
+                import pytest
+                with pytest.raises(RuntimeError, match="executor exploded"):
+                    asyncio.run(run_session(tmp_path, channel=channel, force=True))
+
+        assert "error" in channel.done_statuses
+
+
+# ---------------------------------------------------------------------------
+# core.entry — exercise_completions are persisted after successful session
+# ---------------------------------------------------------------------------
+
+
+class TestExerciseCompletionPersistence:
+    def test_successful_exercises_are_recorded_in_state(self, tmp_path):
+        """After a successful session, exercise_completions in persisted state
+        should contain one entry per exercise with correct name and a timestamp."""
+        channel = RecordingChannel()
+        with _registry_override([_SucceedingExercise]):
+            asyncio.run(run_session(tmp_path, channel=channel, force=True))
+
+        state = load_state(tmp_path)
+        assert len(state.exercise_completions) == 1
+        ec = state.exercise_completions[0]
+        assert ec.exercise_name == "succeeding_ex"
+        # completed_at must be a parseable ISO datetime
+        parsed = datetime.fromisoformat(ec.completed_at)
+        assert parsed.tzinfo is not None  # must be timezone-aware
+
+    def test_failed_exercises_are_not_recorded(self, tmp_path):
+        """An exercise that fails must NOT produce an ExerciseCompletion entry."""
+        class FailsExercise(Exercise):
+            @property
+            def name(self):
+                return "fails_ex"
+
+            async def run(self, channel, profile):
+                return RunResult(completed=False, reason="nope")
+
+        channel = RecordingChannel()
+        with _registry_override([FailsExercise]):
+            asyncio.run(run_session(tmp_path, channel=channel, force=True))
+
+        state = load_state(tmp_path)
+        assert state.exercise_completions == []

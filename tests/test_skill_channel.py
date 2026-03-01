@@ -137,7 +137,7 @@ class TestSkillChannel:
         assert payloads[0]["content"] == content
 
     def test_done_signal(self):
-        """done() emits a tagged line with type=done and status."""
+        """done() emits exactly one tagged line with type=done, status, and no extra keys."""
         channel = SkillChannel()
         output = _capture_stdout(channel.done(status="ok"))
 
@@ -145,6 +145,7 @@ class TestSkillChannel:
         assert len(payloads) == 1
         assert payloads[0]["type"] == "done"
         assert payloads[0]["status"] == "ok"
+        assert set(payloads[0].keys()) == {"type", "status"}
 
     def test_done_error_status(self):
         """done() with error status emits status=error."""
@@ -153,23 +154,6 @@ class TestSkillChannel:
 
         payloads = _parse_tagged_lines(output)
         assert payloads[0]["status"] == "error"
-        assert set(payloads[0].keys()) == {"type", "status"}
-
-    def test_done_without_prior_send(self):
-        """done() works as the only output (e.g. guard path)."""
-        channel = SkillChannel()
-        output = _capture_stdout(channel.done(status="ok"))
-
-        payloads = _parse_tagged_lines(output)
-        assert len(payloads) == 1
-        assert payloads[0]["type"] == "done"
-
-    def test_done_only_emits_status(self):
-        """done() emits only type and status."""
-        channel = SkillChannel()
-        output = _capture_stdout(channel.done(status="ok"))
-
-        payloads = _parse_tagged_lines(output)
         assert set(payloads[0].keys()) == {"type", "status"}
 
     def test_pipe_in_content(self):
