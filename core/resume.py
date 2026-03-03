@@ -30,6 +30,7 @@ logger = logging.getLogger(__name__)
 async def resume_session(
     data_path: Path,
     user_input: str,
+    ask_id: str | None = None,
     channel: OutputChannel | None = None,
 ) -> None:
     if channel is None:
@@ -86,34 +87,54 @@ async def resume_session(
 
         current = exercises[0]
         remaining = exercises[1:]
+        run_current = True
+
+        # --- ask_id mismatch guard ----------------------------------------
+        stored_ask_id = state.execution.current_ask_id
+        if ask_id is not None and stored_ask_id is not None and ask_id != stored_ask_id:
+            logger.info(
+                "ask_id mismatch (got=%s, stored=%s); skipping exercise '%s'.",
+                ask_id,
+                stored_ask_id,
+                current.name,
+            )
+            exercises = remaining
+            # skipping current exercise if we can't match correctness of questions.
+            run_current = False
+            state.execution = None
+            try:
+                save_state(data_path, state)
+            except Exception:
+                logger.warning("Failed to save state after ask_id mismatch", exc_info=True)
+
 
         # --- execute ------------------------------------------------------
 
         executor = SessionExecutor(channel)
 
         current_succeeded = False
+        run_remaining = not run_current  # ask_id mismatch → skip current, run rest
         all_results = []
-        if isinstance(current, InteractiveExercise):
-            # Reply to the exercise that was waiting for user input.
-            reply_result = await executor.reply_exercise(current, user_input, profile)
-            current_succeeded = reply_result.success
-            if not reply_result.success and reply_result.data is None:
-                # Hard failure (all retries exhausted) — log and move on.
-                logger.error("Reply exercise hard-failed for %s; skipping", current.name)
-                state.execution = None
-                save_state(data_path, state)
-                return
 
-            all_results = [reply_result]
-        else:
+        if run_current and not isinstance(current, InteractiveExercise):
             logger.error(
                 "Expected InteractiveExercise for resume but got %s (%s); skipping",
                 type(current).__name__,
                 current.name,
             )
+            run_remaining = True
+        elif run_current:
+            reply_result = await executor.reply_exercise(current, user_input, profile)
+            current_succeeded = reply_result.success
+            if not reply_result.success and reply_result.data is None:
+                # Hard crash (all retries exhausted) — skip and move on.
+                logger.error("Reply exercise hard-failed for %s; skipping", current.name)
+                run_remaining = True
+            else:
+                all_results = [reply_result]
+                run_remaining = current_succeeded
 
-        # Only continue to remaining exercises if the current one completed.
-        if remaining and current_succeeded:
+        if remaining and run_remaining:
             tail_results = await executor.execute(remaining, profile)
             all_results.extend(tail_results)
 

@@ -45,9 +45,10 @@ class ExecutionState:
     current_reason: str | None           # RunResult.reason
     current_stage: tuple[int, int] | None  # RunResult.stage, e.g. (3, 5)
     current_waiting_for_user: bool       # RunResult.waiting_for_user
+    current_ask_id: str | None = None    # token from the question message
 
     def to_dict(self) -> dict:
-        return {
+        d = {
             "completed_count": self.completed_count,
             "remaining_count": self.remaining_count,
             "incomplete_names": self.incomplete_names,
@@ -56,6 +57,8 @@ class ExecutionState:
             "current_stage": list(self.current_stage) if self.current_stage is not None else None,
             "current_waiting_for_user": self.current_waiting_for_user,
         }
+        d["current_ask_id"] = self.current_ask_id
+        return d
 
     @classmethod
     def from_dict(cls, data: dict) -> ExecutionState:
@@ -68,6 +71,7 @@ class ExecutionState:
             current_reason=data.get("current_reason"),
             current_stage=tuple(raw_stage) if raw_stage is not None else None,
             current_waiting_for_user=data.get("current_waiting_for_user", False),
+            current_ask_id=data.get("current_ask_id"),
         )
 
 

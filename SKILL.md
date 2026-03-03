@@ -24,11 +24,11 @@ Monitor stdout for lines starting with `OClaw_SKILL|` to get messages for the us
 
 ### Resuming after user reply
 
-When a `done` message has `status: "reply"`, the session is **waiting for user input**. Deliver the exercise messages to the user and wait for their response. When the user replies, call `resume_session` with their input:
+When a `done` message has `status: "reply"`, the session is **waiting for user input**. Deliver the preceding `text` messages to the user and wait for their response. If any of those messages had a `type: "question"`, note its `invocation_id` from the tagged line — that is the question's `ask_id`. When the user replies, call `resume_session` with their input and the `ask_id`:
 
 ```python
 from english_tutor import resume_session
-await resume_session(data_path, user_input="the user's reply text")
+await resume_session(data_path, user_input="the user's reply text", ask_id="a3f1b8c2")
 ```
 
 `resume_session` feeds the user's answer to the waiting exercise, then continues with any remaining exercises. It emits the same tagged output protocol as `run_session` — including a final `done` message that may itself be `"reply"` (multi-turn exercises) or `"ok"` (session complete).
@@ -44,12 +44,13 @@ If there is no pending exercise (e.g. user sends a message without a waiting ses
 | `data_path` | `Path` | Yes | Directory for persisted learner state |
 | `force` | `bool` | No | Skip guard checks (min session gap, absence nudge). Default `False`. |
 
-**`resume_session(data_path, user_input, channel=None)`**
+**`resume_session(data_path, user_input, ask_id=None, channel=None)`**
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
 | `data_path` | `Path` | Yes | Same directory used in `run_session` |
 | `user_input` | `str` | Yes | The user's reply text |
+| `ask_id` | `str` | No | The `invocation_id` of the question message the user is replying to. Pass it when available. |
 
 ## Output Protocol
 

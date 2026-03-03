@@ -411,3 +411,364 @@ class TestResumeSession:
         assert state.execution.current_exercise_name == "failing_followup"
         assert state.execution.current_reason == "data unavailable"
         assert channel.done_statuses == ["ok"]
+
+
+# ---------------------------------------------------------------------------
+# ask_id mismatch guard and hard-crash-on-reply behavior
+# ---------------------------------------------------------------------------
+
+
+def _make_execution_state_with_ask_id(
+    exercise_name: str,
+    ask_id: str | None = None,
+    waiting_for_user: bool = True,
+    incomplete_names: list[str] | None = None,
+) -> ExecutionState:
+    """Helper to build an ExecutionState that includes current_ask_id."""
+    if incomplete_names is None:
+        incomplete_names = [exercise_name]
+    return ExecutionState(
+        completed_count=0,
+        remaining_count=len(incomplete_names),
+        incomplete_names=incomplete_names,
+        current_exercise_name=exercise_name,
+        current_reason=None,
+        current_stage=None,
+        current_waiting_for_user=waiting_for_user,
+        current_ask_id=ask_id,
+    )
+
+
+class TestAskIdGuard:
+    """Tests for ask_id mismatch guard and hard-crash-on-reply behavior."""
+
+    # ------------------------------------------------------------------
+    # ask_id mismatch — current skipped, remaining run
+    # ------------------------------------------------------------------
+
+    def test_ask_id_mismatch_skips_current_and_runs_remaining(self, tmp_path):
+        """When caller's ask_id doesn't match stored ask_id, the current
+        (interactive) exercise is skipped and remaining exercises still run.
+        The session completes if remaining exercises succeed."""
+
+        class InteractiveEx(InteractiveExercise):
+            reply_called = False
+
+            @property
+            def name(self):
+                return "interactive_ex"
+
+            async def run(self, channel, profile):
+                return RunResult(completed=False, waiting_for_user=True)
+
+            async def reply(self, user_input, channel, profile):
+                InteractiveEx.reply_called = True
+                return RunResult(completed=True)
+
+        class FollowUpEx(Exercise):
+            @property
+            def name(self):
+                return "followup_ex"
+
+            async def run(self, channel, profile):
+                await channel.send(Message(type="text", content="followup ran"))
+                return RunResult(completed=True)
+
+        exec_state = _make_execution_state_with_ask_id(
+            exercise_name="interactive_ex",
+            ask_id="stored-token-111",
+            incomplete_names=["interactive_ex", "followup_ex"],
+        )
+        save_state(tmp_path, SessionState(sessions_completed=0, execution=exec_state))
+
+        channel = RecordingChannel()
+        with _registry_override([InteractiveEx, FollowUpEx]):
+            asyncio.run(
+                resume_session(
+                    tmp_path,
+                    user_input="my answer",
+                    ask_id="different-token-999",
+                    channel=channel,
+                )
+            )
+
+        # reply() must NOT have been called — exercise was skipped
+        assert not InteractiveEx.reply_called
+        # Remaining exercise must have run
+        assert any(m.content == "followup ran" for m in channel.sent)
+        # Session must complete
+        state = load_state(tmp_path)
+        assert state.sessions_completed == 1
+        assert state.execution is None
+        assert channel.done_statuses == ["ok"]
+
+    def test_ask_id_mismatch_no_remaining_still_completes(self, tmp_path):
+        """When ask_id mismatches and there are no remaining exercises, the
+        session completes cleanly (does not hang or error out)."""
+
+        class InteractiveEx(InteractiveExercise):
+            @property
+            def name(self):
+                return "interactive_ex"
+
+            async def run(self, channel, profile):
+                return RunResult(completed=False, waiting_for_user=True)
+
+            async def reply(self, user_input, channel, profile):
+                return RunResult(completed=True)
+
+        exec_state = _make_execution_state_with_ask_id(
+            exercise_name="interactive_ex",
+            ask_id="stored-token",
+            incomplete_names=["interactive_ex"],
+        )
+        save_state(tmp_path, SessionState(sessions_completed=0, execution=exec_state))
+
+        channel = RecordingChannel()
+        with _registry_override([InteractiveEx]):
+            asyncio.run(
+                resume_session(
+                    tmp_path,
+                    user_input="my answer",
+                    ask_id="wrong-token",
+                    channel=channel,
+                )
+            )
+
+        state = load_state(tmp_path)
+        assert state.sessions_completed == 1
+        assert state.execution is None
+        assert channel.done_statuses == ["ok"]
+
+    # ------------------------------------------------------------------
+    # ask_id match — reply proceeds normally
+    # ------------------------------------------------------------------
+
+    def test_ask_id_match_reply_proceeds(self, tmp_path):
+        """When caller's ask_id matches stored ask_id, the reply is accepted
+        and the exercise runs to completion."""
+
+        class InteractiveEx(InteractiveExercise):
+            reply_called = False
+
+            @property
+            def name(self):
+                return "interactive_ex"
+
+            async def run(self, channel, profile):
+                return RunResult(completed=False, waiting_for_user=True)
+
+            async def reply(self, user_input, channel, profile):
+                InteractiveEx.reply_called = True
+                await channel.send(Message(type="text", content="correct!"))
+                return RunResult(completed=True)
+
+        exec_state = _make_execution_state_with_ask_id(
+            exercise_name="interactive_ex",
+            ask_id="matching-token",
+            incomplete_names=["interactive_ex"],
+        )
+        save_state(tmp_path, SessionState(sessions_completed=0, execution=exec_state))
+
+        channel = RecordingChannel()
+        with _registry_override([InteractiveEx]):
+            asyncio.run(
+                resume_session(
+                    tmp_path,
+                    user_input="correct answer",
+                    ask_id="matching-token",
+                    channel=channel,
+                )
+            )
+
+        assert InteractiveEx.reply_called
+        assert any(m.content == "correct!" for m in channel.sent)
+        state = load_state(tmp_path)
+        assert state.sessions_completed == 1
+        assert state.execution is None
+        assert channel.done_statuses == ["ok"]
+
+    # ------------------------------------------------------------------
+    # ask_id=None from caller — always accepted
+    # ------------------------------------------------------------------
+
+    def test_caller_ask_id_none_always_accepted_even_with_stored_ask_id(self, tmp_path):
+        """When caller passes ask_id=None, the reply is always accepted
+        regardless of what ask_id is stored."""
+
+        class InteractiveEx(InteractiveExercise):
+            reply_called = False
+
+            @property
+            def name(self):
+                return "interactive_ex"
+
+            async def run(self, channel, profile):
+                return RunResult(completed=False, waiting_for_user=True)
+
+            async def reply(self, user_input, channel, profile):
+                InteractiveEx.reply_called = True
+                return RunResult(completed=True)
+
+        exec_state = _make_execution_state_with_ask_id(
+            exercise_name="interactive_ex",
+            ask_id="some-stored-token",
+            incomplete_names=["interactive_ex"],
+        )
+        save_state(tmp_path, SessionState(sessions_completed=0, execution=exec_state))
+
+        channel = RecordingChannel()
+        with _registry_override([InteractiveEx]):
+            asyncio.run(
+                resume_session(
+                    tmp_path,
+                    user_input="my answer",
+                    ask_id=None,  # caller sends no ask_id
+                    channel=channel,
+                )
+            )
+
+        # reply() must have been called — no mismatch when caller sends None
+        assert InteractiveEx.reply_called
+        state = load_state(tmp_path)
+        assert state.sessions_completed == 1
+        assert state.execution is None
+        assert channel.done_statuses == ["ok"]
+
+    # ------------------------------------------------------------------
+    # stored ask_id=None — caller's ask_id always accepted
+    # ------------------------------------------------------------------
+
+    def test_stored_ask_id_none_any_caller_ask_id_accepted(self, tmp_path):
+        """When stored ask_id is None, no mismatch is possible — any value
+        the caller sends is accepted and the reply proceeds."""
+
+        class InteractiveEx(InteractiveExercise):
+            reply_called = False
+
+            @property
+            def name(self):
+                return "interactive_ex"
+
+            async def run(self, channel, profile):
+                return RunResult(completed=False, waiting_for_user=True)
+
+            async def reply(self, user_input, channel, profile):
+                InteractiveEx.reply_called = True
+                return RunResult(completed=True)
+
+        exec_state = _make_execution_state_with_ask_id(
+            exercise_name="interactive_ex",
+            ask_id=None,  # stored ask_id is absent
+            incomplete_names=["interactive_ex"],
+        )
+        save_state(tmp_path, SessionState(sessions_completed=0, execution=exec_state))
+
+        channel = RecordingChannel()
+        with _registry_override([InteractiveEx]):
+            asyncio.run(
+                resume_session(
+                    tmp_path,
+                    user_input="my answer",
+                    ask_id="caller-provides-some-token",
+                    channel=channel,
+                )
+            )
+
+        assert InteractiveEx.reply_called
+        state = load_state(tmp_path)
+        assert state.sessions_completed == 1
+        assert state.execution is None
+        assert channel.done_statuses == ["ok"]
+
+    # ------------------------------------------------------------------
+    # Hard crash on reply — remaining exercises still run
+    # ------------------------------------------------------------------
+
+    def test_hard_crash_on_reply_skips_current_runs_remaining(self, tmp_path):
+        """When reply() raises an exception on every retry attempt
+        (data=None after exhausting retries), the current exercise is
+        skipped and remaining exercises still run to completion."""
+
+        class CrashingEx(InteractiveExercise):
+            @property
+            def name(self):
+                return "crashing_ex"
+
+            async def run(self, channel, profile):
+                return RunResult(completed=False, waiting_for_user=True)
+
+            async def reply(self, user_input, channel, profile):
+                raise RuntimeError("simulated hard crash")
+
+        class FollowUpEx(Exercise):
+            @property
+            def name(self):
+                return "followup_ex"
+
+            async def run(self, channel, profile):
+                await channel.send(Message(type="text", content="tail ran"))
+                return RunResult(completed=True)
+
+        exec_state = _make_execution_state_with_ask_id(
+            exercise_name="crashing_ex",
+            incomplete_names=["crashing_ex", "followup_ex"],
+        )
+        save_state(tmp_path, SessionState(sessions_completed=0, execution=exec_state))
+
+        channel = RecordingChannel()
+        with _registry_override([CrashingEx, FollowUpEx]):
+            asyncio.run(
+                resume_session(
+                    tmp_path,
+                    user_input="my answer",
+                    channel=channel,
+                )
+            )
+
+        # Remaining exercise must have run despite the crash
+        assert any(m.content == "tail ran" for m in channel.sent)
+        # Session must complete (crashing exercise is skipped, tail succeeded)
+        state = load_state(tmp_path)
+        assert state.sessions_completed == 1
+        assert state.execution is None
+        assert channel.done_statuses == ["ok"]
+
+    def test_hard_crash_on_reply_no_remaining_session_completes(self, tmp_path):
+        """When reply() hard-crashes and there are no remaining exercises,
+        the session completes without hanging or erroring."""
+
+        class CrashingEx(InteractiveExercise):
+            @property
+            def name(self):
+                return "crashing_ex"
+
+            async def run(self, channel, profile):
+                return RunResult(completed=False, waiting_for_user=True)
+
+            async def reply(self, user_input, channel, profile):
+                raise RuntimeError("simulated hard crash on every attempt")
+
+        exec_state = _make_execution_state_with_ask_id(
+            exercise_name="crashing_ex",
+            incomplete_names=["crashing_ex"],
+        )
+        save_state(tmp_path, SessionState(sessions_completed=2, execution=exec_state))
+
+        channel = RecordingChannel()
+        with _registry_override([CrashingEx]):
+            asyncio.run(
+                resume_session(
+                    tmp_path,
+                    user_input="my answer",
+                    channel=channel,
+                )
+            )
+
+        state = load_state(tmp_path)
+        # Session completes: the only exercise crashed so it's treated as
+        # skipped; remaining list is empty, so record_and_finalize sees
+        # all_results=[] which is not a failure → completes.
+        assert state.sessions_completed == 3
+        assert state.execution is None
+        assert channel.done_statuses == ["ok"]

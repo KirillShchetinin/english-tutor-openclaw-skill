@@ -39,6 +39,7 @@ def build_execution_state(
         current_reason=run_result.reason if run_result else None,
         current_stage=run_result.stage if run_result else None,
         current_waiting_for_user=run_result.waiting_for_user if run_result else False,
+        current_ask_id=run_result.ask_id if run_result else None,
     )
 
 

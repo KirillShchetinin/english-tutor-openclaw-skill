@@ -13,6 +13,7 @@ class RunResult:
     reason: str | None = None
     stage: tuple[int, int] | None = None  # (current, total) e.g. (3, 5)
     waiting_for_user: bool = False
+    ask_id: str | None = None  # token from channel.send() for the question message
 
 
 class Exercise(ABC):
