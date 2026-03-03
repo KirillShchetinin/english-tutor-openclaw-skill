@@ -15,7 +15,7 @@ from pathlib import Path
 
 from channels.console import ConsoleChannel
 from core.entry import run_session
-from core.state import load_state
+from core.state_util import load_state
 
 TESTS_DIR = Path(__file__).parent
 DATA_DIR = TESTS_DIR / "data"

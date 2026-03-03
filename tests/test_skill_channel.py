@@ -16,7 +16,7 @@ from unittest.mock import patch
 from models import Message, SessionState, UserProfile
 from channels.skill_channel import SkillChannel
 from core.entry import run_session
-from core.state import save_state
+from core.state_util import save_state
 from exercises.base import Exercise
 from exercises.registry import _registry, override_registry
 

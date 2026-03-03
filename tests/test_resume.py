@@ -16,7 +16,7 @@ from exercises.base import Exercise, RunResult
 from exercises.registry import _registry, override_registry
 from core.entry import resume_session
 from core.session_builder import build_exercises_by_names
-from core.state import load_state, save_state
+from core.state_util import load_state, save_state
 from config import RESUME_CLOSE_TO_NEXT_MINUTES
 
 

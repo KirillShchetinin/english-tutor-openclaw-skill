@@ -18,7 +18,7 @@ from exercises.base import Exercise, RunResult
 from exercises.registry import _registry, override_registry
 from core.session_executor import SessionExecutor
 from core.entry import run_session
-from core.state import load_state, save_state
+from core.state_util import load_state, save_state
 from config import ABSENCE_NUDGE_DAYS
 
 

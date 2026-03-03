@@ -10,7 +10,7 @@ import pytest
 from unittest.mock import patch
 
 from models import Message, ExerciseCompletion, ExecutionState, SessionState, UserProfile
-from core.state import load_state, save_state, load_profile, save_profile
+from core.state_util import load_state, save_state, load_profile, save_profile
 
 
 # ---------------------------------------------------------------------------

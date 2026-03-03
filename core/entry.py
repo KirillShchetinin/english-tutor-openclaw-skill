@@ -8,7 +8,7 @@ from models import Message, ExerciseCompletion, ExecutionState
 from channels.base import OutputChannel
 from channels.skill_channel import SkillChannel
 from config import ABSENCE_NUDGE_DAYS, PROFILE_REFRESH_INTERVAL, set_data_path
-from core.state import load_state, save_state, load_profile, save_profile
+from core.state_util import load_state, save_state, load_profile, save_profile
 from core.session_builder import build_session
 from core.session_executor import SessionExecutor, ExerciseResult
 
