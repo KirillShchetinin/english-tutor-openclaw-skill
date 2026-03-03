@@ -126,12 +126,13 @@ async def resume_session(
         elif run_current:
             reply_result = await executor.reply_exercise(current, user_input, profile)
             current_succeeded = reply_result.success
-            if not reply_result.success and reply_result.data is None:
+            if not current_succeeded and reply_result.data is None:
                 # Hard crash (all retries exhausted) — skip and move on.
                 logger.error("Reply exercise hard-failed for %s; skipping", current.name)
                 run_remaining = True
             else:
                 all_results = [reply_result]
+                # This is interactive interrupt case - we need reply from user.
                 run_remaining = current_succeeded
 
         if remaining and run_remaining:
