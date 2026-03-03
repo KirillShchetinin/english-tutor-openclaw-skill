@@ -7,44 +7,15 @@ Run from the english-tutor directory:
 from __future__ import annotations
 
 import asyncio
-from contextlib import contextmanager
 from unittest.mock import patch
 
 from models import Message, SessionState, ExecutionState
-from channels.base import OutputChannel
-from exercises.base import Exercise, RunResult
-from exercises.registry import _registry, override_registry
-from core.entry import resume_session
+from exercises.base import Exercise, InteractiveExercise, RunResult
+from core.resume import resume_session
 from core.session_builder import build_exercises_by_names
 from core.state_util import load_state, save_state
 from config import RESUME_CLOSE_TO_NEXT_MINUTES
-
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-
-class RecordingChannel(OutputChannel):
-    def __init__(self):
-        self.sent: list[Message] = []
-        self.done_statuses: list[str] = []
-
-    async def send(self, message: Message) -> None:
-        self.sent.append(message)
-
-    async def done(self, status: str = "ok", **_kwargs) -> None:
-        self.done_statuses.append(status)
-
-
-@contextmanager
-def _registry_override(classes: list):
-    original = _registry[:]
-    override_registry(classes)
-    try:
-        yield
-    finally:
-        override_registry(original)
+from tests.helpers import RecordingChannel, registry_override as _registry_override
 
 
 def _make_execution_state(
@@ -207,7 +178,7 @@ class TestResumeSession:
         """If next push is within RESUME_CLOSE_TO_NEXT_MINUTES, sends 'new session
         coming' message and does NOT clear execution state."""
 
-        class InteractiveEx(Exercise):
+        class InteractiveEx(InteractiveExercise):
             @property
             def name(self):
                 return "interactive_ex"
@@ -225,7 +196,7 @@ class TestResumeSession:
         with _registry_override([InteractiveEx]):
             # Patch _minutes_to_next_push to return a value within the threshold
             with patch(
-                "core.entry._minutes_to_next_push",
+                "core.resume.minutes_to_next_lesson",
                 return_value=float(RESUME_CLOSE_TO_NEXT_MINUTES) - 1,
             ):
                 asyncio.run(resume_session(tmp_path, user_input="answer", channel=channel))
@@ -246,7 +217,7 @@ class TestResumeSession:
         """When reply returns completed=True and no remaining exercises, the session
         completes: sessions_completed is incremented and execution is cleared."""
 
-        class InteractiveEx(Exercise):
+        class InteractiveEx(InteractiveExercise):
             @property
             def name(self):
                 return "interactive_ex"
@@ -282,7 +253,7 @@ class TestResumeSession:
         """When reply completes the current exercise and there are remaining exercises,
         the executor runs them; if all succeed the session completes fully."""
 
-        class InteractiveEx(Exercise):
+        class InteractiveEx(InteractiveExercise):
             @property
             def name(self):
                 return "interactive_ex"
@@ -328,7 +299,7 @@ class TestResumeSession:
         stays the same."""
         new_stage = (2, 3)
 
-        class MultiTurnEx(Exercise):
+        class MultiTurnEx(InteractiveExercise):
             @property
             def name(self):
                 return "multiturn_ex"
@@ -362,13 +333,13 @@ class TestResumeSession:
         assert state.execution.current_stage == new_stage
         assert state.execution.current_reason == "awaiting next answer"
         assert state.execution.current_waiting_for_user is True
-        assert channel.done_statuses == ["ok"]
+        assert channel.done_statuses == ["reply"]
 
     def test_reply_gives_up_sets_waiting_false_does_not_clear(self, tmp_path):
         """When reply returns completed=False, waiting_for_user=False, execution is
         updated with current_waiting_for_user=False so the next resume guard fires."""
 
-        class GivesUpEx(Exercise):
+        class GivesUpEx(InteractiveExercise):
             @property
             def name(self):
                 return "givesup_ex"
@@ -402,7 +373,7 @@ class TestResumeSession:
         """When reply succeeds but a subsequent exercise fails, a new ExecutionState
         is built from the remaining exercises rather than clearing it."""
 
-        class InteractiveEx(Exercise):
+        class InteractiveEx(InteractiveExercise):
             @property
             def name(self):
                 return "interactive_ex"

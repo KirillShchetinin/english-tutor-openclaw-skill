@@ -26,3 +26,17 @@ class Exercise(ABC):
     async def run(self, channel: OutputChannel, profile: UserProfile) -> RunResult:
         """Run the exercise, sending output via channel. Returns completion result."""
         ...
+
+
+
+class InteractiveExercise(Exercise):
+    """Exercise that supports multi-turn interaction via reply().
+
+    The exercise must persist enough context during run() to handle a later
+    reply() call — the framework only stores which exercise to resume.
+    """
+
+    @abstractmethod
+    async def reply(self, user_input: str, channel: OutputChannel, profile: UserProfile) -> RunResult:
+        """Handle user's reply during a resumed session."""
+        ...

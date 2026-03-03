@@ -26,8 +26,9 @@ class SkillChannel(OutputChannel):
     async def send(self, message: Message) -> None:
         sys.stdout.write(self._tag(message.to_dict()))
 
-    async def done(self, status: str = "ok", **_kwargs) -> None:
-        sys.stdout.write(self._tag({"type": "done", "status": status}))
+    async def done(self, status: str = "ok", **kwargs) -> None:
+        payload = {"type": "done", "status": status, **kwargs}
+        sys.stdout.write(self._tag(payload))
 
     def __repr__(self) -> str:
         return "SkillChannel()"

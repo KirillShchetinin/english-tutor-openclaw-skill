@@ -11,13 +11,14 @@ from pathlib import Path
 from channels.base import OutputChannel
 from models import Message, UserProfile
 from config import get_data_path
+from messages import VOCAB_EMPTY, VOCAB_HEADER, VOCAB_RECALL_HINT
 from exercises.base import Exercise, RunResult
 from exercises.registry import register_exercise
 
 logger = logging.getLogger(__name__)
 
 ACTIVE_POOL_SIZE = 50
-WORDS_PER_SESSION = 6
+WORDS_PER_SESSION = 10
 GRADUATION_SHOW_COUNT = 8
 REVIEW_PROBABILITY = 0.2
 TOPIC_FULL_THRESHOLD = 30
@@ -50,7 +51,7 @@ class VocabExercise(Exercise):
                 await channel.send(
                     Message(
                         type="text",
-                        content="Словарь пока пуст. Скоро добавим новые слова!",
+                        content=VOCAB_EMPTY,
                     )
                 )
             except Exception:
@@ -136,6 +137,11 @@ class VocabExercise(Exercise):
             state.topics[topic]["word_count"] += 1
             added += 1
 
+        if added == 0:
+            # All bank words already in vocab; mark topic as full so
+            # _select_topic moves on to the next one.
+            state.topics[topic]["word_count"] = TOPIC_FULL_THRESHOLD
+
     def _select_topic(self, topics: dict) -> str | None:
         started = [t for t in topics if topics[t]["started"]]
 
@@ -179,13 +185,11 @@ class VocabExercise(Exercise):
         return result[:WORDS_PER_SESSION]
 
     def _format(self, words: list[dict]) -> list[Message]:
-        lines = ["📖 **Словарный запас**", ""]
+        lines = [VOCAB_HEADER, ""]
         for i, word in enumerate(words, 1):
             lines.append(f"{i}. **{word['en']}** — {word['ru']}")
         lines.append("")
-        lines.append(
-            "Попробуй вспомнить английские слова, прежде чем читать их!"
-        )
+        lines.append(VOCAB_RECALL_HINT)
         content = "\n".join(lines)
         return [Message(type="text", content=content, parse_mode="Markdown")]
 

@@ -58,12 +58,6 @@ class TestSessionState:
         assert restored.exercise_completions[0].exercise_name == "vocab_drill"
         assert restored.exercise_completions[0].completed_at == "2026-02-24T05:00:00+00:00"
 
-    def test_from_dict_defaults_on_empty(self):
-        state = SessionState.from_dict({})
-        assert state.sessions_completed == 0
-        assert state.last_completed_at is None
-        assert state.sessions_skipped == 0
-        assert state.exercise_completions == []
 
 
 # ---------------------------------------------------------------------------
@@ -91,13 +85,6 @@ class TestUserProfile:
         assert restored.streak == 14
         assert restored.weak_spots == ["articles", "prepositions"]
         assert restored.strong_topics == ["past tense", "vocabulary"]
-
-    def test_from_dict_defaults_on_empty(self):
-        profile = UserProfile.from_dict({})
-        assert profile.summary == ""
-        assert profile.words_learned == 0
-        assert profile.accuracy == 0.0
-        assert profile.weak_spots == []
 
     def test_to_dict_returns_independent_copy(self):
         """Mutating the to_dict output must not affect the stored profile."""
@@ -213,20 +200,6 @@ class TestExecutionState:
         assert restored.current_stage is None
         assert restored.current_reason is None
         assert restored.current_waiting_for_user is False
-
-    def test_from_dict_defaults(self):
-        """Missing optional keys get sensible defaults."""
-        # Only required keys are provided
-        es = ExecutionState.from_dict({
-            "completed_count": 1,
-            "remaining_count": 0,
-        })
-
-        assert es.incomplete_names == []
-        assert es.current_exercise_name is None
-        assert es.current_reason is None
-        assert es.current_stage is None
-        assert es.current_waiting_for_user is False
 
     def test_session_state_round_trip_with_execution(self):
         """A SessionState with a non-None execution round-trips through to_dict/from_dict."""

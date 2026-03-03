@@ -12,3 +12,13 @@ def build_session(state: SessionState, profile: UserProfile) -> list[Exercise]:
     Returns empty list when no exercises are registered yet.
     """
     return [cls() for cls in get_registry()]
+
+
+def build_exercises_by_names(names: list[str]) -> list[Exercise]:
+    """Instantiate registered exercises matching the given names, preserving order.
+
+    Unknown names are silently skipped (exercise may have been removed).
+    """
+    instances = [cls() for cls in get_registry()]
+    by_name = {ex.name: ex for ex in instances}
+    return [by_name[n] for n in names if n in by_name]

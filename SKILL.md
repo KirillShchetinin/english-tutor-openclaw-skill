@@ -11,18 +11,45 @@ This skill delivers English lessons to a beginner Russian-speaking learner via T
 
 ## Usage
 
+### Starting a new session
+
 ```python
 from english_tutor import run_session
 await run_session(data_path)
 ```
 
-Monitor stdout for lines starting with `OClaw_SKILL|` to get messages for the user. See "Output Protocol" below. **After session completes, follow "Post-Session Diagnostics" to check for exercise crashes and self-heal.**
+Monitor stdout for lines starting with `OClaw_SKILL|` to get messages for the user. See "Output Protocol" below. **After session completes ('done' message), follow "Post-Session Diagnostics" to check for exercise crashes and self-heal.**
+
+** if this skill is invoked by the cron job, it should first ask user if user wants to do the lesson now or later. If user wants to do it later, the skill should exit without doing anything. Otherwise, proceed with the lesson by making python call as outlined above.**
+
+### Resuming after user reply
+
+When a `done` message has `status: "reply"`, the session is **waiting for user input**. Deliver the exercise messages to the user and wait for their response. When the user replies, call `resume_session` with their input:
+
+```python
+from english_tutor import resume_session
+await resume_session(data_path, user_input="the user's reply text")
+```
+
+`resume_session` feeds the user's answer to the waiting exercise, then continues with any remaining exercises. It emits the same tagged output protocol as `run_session` — including a final `done` message that may itself be `"reply"` (multi-turn exercises) or `"ok"` (session complete).
+
+If there is no pending exercise (e.g. user sends a message without a waiting session), `resume_session` replies with a text message telling the user to start a new lesson.
 
 ### Parameters
+
+**`run_session(data_path, channel=None, force=False)`**
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
 | `data_path` | `Path` | Yes | Directory for persisted learner state |
+| `force` | `bool` | No | Skip guard checks (min session gap, absence nudge). Default `False`. |
+
+**`resume_session(data_path, user_input, channel=None)`**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `data_path` | `Path` | Yes | Same directory used in `run_session` |
+| `user_input` | `str` | Yes | The user's reply text |
 
 ## Output Protocol
 
@@ -37,8 +64,16 @@ Format: `OClaw_SKILL|<invocation_id>|<json>`
 
 | `type` | Action |
 |--------|--------|
-| `done` | Session is complete. If `status` is `"ok"`, confirm to the user: "Урок завершён." If `status` is `"error"`, tell user: "Произошла ошибка, попробуй позже." |
+| `done` | Session ended. Check `status` field — see **Done statuses** below. |
 | `text` | A message for the user. Send the `content` field as-is. Preserve formatting (Markdown/HTML per `parse_mode`). |
+
+### Done statuses
+
+| `status` | Meaning | Action |
+|----------|---------|--------|
+| `"ok"` | Session completed normally. | Confirm to the user: "Урок завершён." |
+| `"reply"` | An exercise is waiting for the user's answer. | Deliver the preceding `text` messages to the user, wait for their reply, then call `resume_session(data_path, user_input)`. |
+| `"error"` | Session failed due to an internal error. The `error` field may contain details (e.g. `"internal_error"`). | Tell user: "Произошла ошибка, попробуй позже." |
 
 ### Example output
 

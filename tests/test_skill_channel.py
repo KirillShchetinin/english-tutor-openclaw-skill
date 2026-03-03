@@ -156,6 +156,15 @@ class TestSkillChannel:
         assert payloads[0]["status"] == "error"
         assert set(payloads[0].keys()) == {"type", "status"}
 
+    def test_done_forwards_error_kwarg(self):
+        """done(status='error', error='internal_error') includes error key in payload."""
+        channel = SkillChannel()
+        output = _capture_stdout(channel.done(status="error", error="internal_error"))
+
+        payloads = _parse_tagged_lines(output)
+        assert payloads[0]["status"] == "error"
+        assert payloads[0]["error"] == "internal_error"
+
     def test_pipe_in_content(self):
         """Pipe characters in content do not break the protocol."""
         channel = SkillChannel()

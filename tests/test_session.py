@@ -8,35 +8,18 @@ from __future__ import annotations
 
 import asyncio
 import io
-from contextlib import contextmanager
 from datetime import datetime, timezone, timedelta
 from unittest.mock import patch
 
 from models import Message, SessionState, UserProfile, ExecutionState
-from channels.base import OutputChannel
 from exercises.base import Exercise, RunResult
-from exercises.registry import _registry, override_registry
-from core.session_executor import SessionExecutor
+from exercises.registry import override_registry
+from core.session_executor import SessionExecutor, ExerciseResult
 from core.entry import run_session
 from core.state_util import load_state, save_state
+from core.session_helpers import record_and_finalize, minutes_to_next_lesson
 from config import ABSENCE_NUDGE_DAYS
-
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-
-class RecordingChannel(OutputChannel):
-    def __init__(self):
-        self.sent: list[Message] = []
-        self.done_statuses: list[str] = []
-
-    async def send(self, message: Message) -> None:
-        self.sent.append(message)
-
-    async def done(self, status: str = "ok", **_kwargs) -> None:
-        self.done_statuses.append(status)
+from tests.helpers import RecordingChannel, registry_override as _registry_override
 
 
 def _make_exercise(name: str, messages=None, raises=None):
@@ -66,16 +49,6 @@ class _SucceedingExercise(Exercise):
     async def run(self, channel, profile):
         await channel.send(Message(type="text", content="hello"))
         return RunResult(completed=True)
-
-
-@contextmanager
-def _registry_override(classes: list):
-    original = _registry[:]
-    override_registry(classes)
-    try:
-        yield
-    finally:
-        override_registry(original)
 
 
 # ---------------------------------------------------------------------------
@@ -334,6 +307,7 @@ class TestRunSessionExecutionState:
         assert exec_state.current_exercise_name == "incomplete_ex"
         assert "incomplete_ex" in exec_state.incomplete_names
         assert "succeeding_ex" in exec_state.incomplete_names
+        assert channel.done_statuses == ["reply"]
 
     def test_stale_execution_cleared_before_new_session(self, tmp_path):
         """When run_session starts and state already has an execution snapshot
@@ -575,6 +549,7 @@ class TestBuildExecutionStateMidSession:
         assert "ex_second" in exec_state.incomplete_names
         assert "ex_third" in exec_state.incomplete_names
         assert "ex_first" not in exec_state.incomplete_names
+        assert channel.done_statuses == ["reply"]
 
 
 # ---------------------------------------------------------------------------
@@ -585,7 +560,8 @@ class TestBuildExecutionStateMidSession:
 class TestNaiveTimestamp:
     def test_naive_timestamp_in_state_does_not_raise(self, tmp_path):
         """A last_completed_at stored without timezone info (naive ISO string) must
-        be handled gracefully — not raise TypeError on comparison."""
+        be handled gracefully — not raise TypeError on comparison.  The naive time
+        is treated as UTC, so elapsed ≈ 0 s and the session proceeds normally."""
         # Store a naive ISO timestamp (no +00:00 suffix)
         naive_ts = datetime.now(timezone.utc).replace(tzinfo=None)
         save_state(tmp_path, SessionState(
@@ -598,9 +574,9 @@ class TestNaiveTimestamp:
             # This would raise TypeError if entry.py did not handle the naive case
             asyncio.run(run_session(tmp_path, channel=channel, force=False))
 
-        # Either guard triggered or session completed — no exception is the assertion
+        # Elapsed ≈ 0 s → guard passes → session completes → incremented to 2
         state = load_state(tmp_path)
-        assert state.sessions_completed >= 1
+        assert state.sessions_completed == 2
 
 
 # ---------------------------------------------------------------------------
@@ -673,3 +649,67 @@ class TestExerciseCompletionPersistence:
 
         state = load_state(tmp_path)
         assert state.exercise_completions == []
+
+
+# ---------------------------------------------------------------------------
+# core.session_helpers — minutes_to_next_lesson
+# ---------------------------------------------------------------------------
+
+
+class TestMinutesToNextLesson:
+    def test_before_first_slot_returns_minutes_to_it(self):
+        """At 08:00 UTC with slots [09:00, 14:00, 20:00], next slot is 09:00 → 60 min."""
+        now = datetime(2026, 3, 3, 8, 0, tzinfo=timezone.utc)
+        with patch("core.session_helpers.SESSION_PUSH_TIMES", ["09:00", "14:00", "20:00"]):
+            assert minutes_to_next_lesson(now) == 60.0
+
+    def test_between_slots_returns_minutes_to_next(self):
+        """At 10:30 UTC, next slot is 14:00 → 210 min."""
+        now = datetime(2026, 3, 3, 10, 30, tzinfo=timezone.utc)
+        with patch("core.session_helpers.SESSION_PUSH_TIMES", ["09:00", "14:00", "20:00"]):
+            assert minutes_to_next_lesson(now) == 210.0
+
+    def test_after_all_slots_wraps_to_tomorrow(self):
+        """At 21:00 UTC (past all slots), wraps to tomorrow's first slot → 720 min."""
+        now = datetime(2026, 3, 3, 21, 0, tzinfo=timezone.utc)
+        with patch("core.session_helpers.SESSION_PUSH_TIMES", ["09:00", "14:00", "20:00"]):
+            assert minutes_to_next_lesson(now) == 720.0
+
+    def test_empty_push_times_returns_none(self):
+        """With no configured push times, returns None."""
+        now = datetime(2026, 3, 3, 12, 0, tzinfo=timezone.utc)
+        with patch("core.session_helpers.SESSION_PUSH_TIMES", []):
+            assert minutes_to_next_lesson(now) is None
+
+
+# ---------------------------------------------------------------------------
+# core.session_helpers — record_and_finalize hard-fail path
+# ---------------------------------------------------------------------------
+
+
+class TestRecordAndFinalizeHardFail:
+    def test_pause_on_any_failure_with_hard_fail_builds_safe_execution_state(self):
+        """When pause_on_any_failure=True and the last result is a hard fail
+        (data=None), ExecutionState is built with safe None/False defaults
+        for reason, stage, and waiting_for_user."""
+
+        class FakeExercise:
+            @property
+            def name(self):
+                return "hard_fail_ex"
+
+        state = SessionState()
+        exercises = [FakeExercise()]
+        results = [ExerciseResult(exercise_name="hard_fail_ex", success=False, data=None)]
+        now = datetime.now(timezone.utc)
+
+        record_and_finalize(state, exercises, results, now, pause_on_any_failure=True)
+
+        assert state.sessions_completed == 0
+        assert state.execution is not None
+        assert state.execution.current_exercise_name == "hard_fail_ex"
+        assert state.execution.current_reason is None
+        assert state.execution.current_stage is None
+        assert state.execution.current_waiting_for_user is False
+
+

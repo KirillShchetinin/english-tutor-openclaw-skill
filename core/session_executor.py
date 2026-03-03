@@ -3,8 +3,10 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 
+from typing import Callable, Coroutine, Any
+
 from models import UserProfile
-from exercises.base import Exercise, RunResult
+from exercises.base import Exercise, InteractiveExercise, RunResult
 from channels.base import OutputChannel
 from config import EXERCISE_RETRY_ATTEMPTS
 
@@ -38,14 +40,37 @@ class SessionExecutor:
                 )
         return results
 
+    async def reply_exercise(
+        self,
+        exercise: InteractiveExercise,
+        user_input: str,
+        profile: UserProfile,
+    ) -> ExerciseResult:
+        """Call exercise.reply() with the same retry policy as run."""
+        return await self._retry(
+            exercise,
+            lambda: exercise.reply(user_input, self._channel, profile),
+        )
+
     async def _run_exercise(
         self, exercise: Exercise, profile: UserProfile
     ) -> ExerciseResult:
         """Run single exercise with retry on unexpected failure."""
+        return await self._retry(
+            exercise,
+            lambda: exercise.run(self._channel, profile),
+        )
+
+    async def _retry(
+        self,
+        exercise: Exercise,
+        call: Callable[[], Coroutine[Any, Any, RunResult]],
+    ) -> ExerciseResult:
+        """Execute *call* with retry on unexpected failure."""
         attempts = 1 + EXERCISE_RETRY_ATTEMPTS  # 1 original + retries
         for attempt in range(attempts):
             try:
-                run_result = await exercise.run(self._channel, profile)
+                run_result = await call()
                 if run_result.completed:
                     return ExerciseResult(exercise_name=exercise.name, success=True)
                 # Soft failure: exercise decided it can't complete — respect it, no retry.

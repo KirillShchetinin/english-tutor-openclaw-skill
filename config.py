@@ -3,14 +3,11 @@ from __future__ import annotations
 from pathlib import Path
 
 WORKSPACE_DATA_PATH: Path = Path("data/skills/english-tutor/")
-
 SESSION_PUSH_TIMES: list[str] = ["09:00", "14:00", "20:00"]
-
 ABSENCE_NUDGE_DAYS: int = 2
-
 PROFILE_REFRESH_INTERVAL: int = 5
-
 EXERCISE_RETRY_ATTEMPTS: int = 1
+RESUME_CLOSE_TO_NEXT_MINUTES: int = 30
 
 # Runtime data path — set by entry.py at session start, allows test isolation.
 _active_data_path: Path | None = None
@@ -27,3 +24,9 @@ def set_data_path(path: Path) -> None:
     """Set the active data path. Called by run_session() at startup."""
     global _active_data_path
     _active_data_path = path
+
+
+def reset_data_path() -> None:
+    """Reset the active data path to the default. Called after session ends."""
+    global _active_data_path
+    _active_data_path = None
