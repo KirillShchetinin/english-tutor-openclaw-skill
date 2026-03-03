@@ -1,6 +1,12 @@
 # English Tutor
 
-An [OpenClaw](https://github.com/OpenClaw) Skill that delivers push-only English lessons to a beginner Russian-speaking learner. Sessions run 3x/day via cron or on-demand. All system-facing text is in Russian; English appears only inside exercise content.
+Your AI-powered English teacher that sends you bite-sized lessons throughout the day — no apps to open, no homework to forget. You get a Telegram message, you learn a few words, you move on. Three times a day, every day.
+
+Built for Russian speakers starting from zero. The tutor explains everything in Russian, introduces English gradually, and remembers what you've learned so it can build on it next time.
+
+**What a lesson looks like:** you receive a short message with a handful of new words, a simple grammar point, or a useful phrase — each with a Russian translation and example. That's it. No quizzes, no streaks, no guilt. Just steady, low-effort progress.
+
+---
 
 ## How It Works
 
