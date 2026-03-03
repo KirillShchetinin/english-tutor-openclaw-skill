@@ -20,15 +20,21 @@ class SkillChannel(OutputChannel):
     stdout/stderr output is ignored.
     """
 
-    def _tag(self, data: dict) -> str:
-        return f"{_PREFIX}|{secrets.token_hex(4)}|{json.dumps(data, ensure_ascii=False)}\n"
+    def _tag(self, data: dict) -> tuple[str, str]:
+        token = secrets.token_hex(4)
+        line = f"{_PREFIX}|{token}|{json.dumps(data, ensure_ascii=False)}\n"
+        return line, token
 
-    async def send(self, message: Message) -> None:
-        sys.stdout.write(self._tag(message.to_dict()))
+    async def send(self, message: Message) -> str:
+        line, token = self._tag(message.to_dict())
+        sys.stdout.write(line)
+        return token
 
-    async def done(self, status: str = "ok", **kwargs) -> None:
+    async def done(self, status: str = "ok", **kwargs) -> str:
         payload = {"type": "done", "status": status, **kwargs}
-        sys.stdout.write(self._tag(payload))
+        line, token = self._tag(payload)
+        sys.stdout.write(line)
+        return token
 
     def __repr__(self) -> str:
         return "SkillChannel()"

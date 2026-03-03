@@ -7,8 +7,8 @@ from models import Message
 
 class OutputChannel(ABC):
     @abstractmethod
-    async def send(self, message: Message) -> None:
-        """Send a message to the user."""
+    async def send(self, message: Message) -> str | None:
+        """Send a message to the user. May return a message id."""
         ...
 
     async def done(self, status: str = "ok", **_kwargs) -> None:
