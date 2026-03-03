@@ -174,14 +174,14 @@ class TestSessionExecutor:
         assert len(results) == 3
         assert all(r.success for r in results)
 
-    def test_stops_after_first_failure(self):
-        """Given [success, fail, success], only the first two exercises run;
-        the third is never reached (its message never appears in the channel)."""
+    def test_crash_is_skipped_and_next_exercises_run(self):
+        """Given [success, crash, success], the crashed exercise is skipped and
+        the third exercise still runs — all three produce results."""
         channel = RecordingChannel()
 
         ex_a = _make_exercise("ex_a", messages=[Message(type="text", content="from_a")])
 
-        class FailingExercise(Exercise):
+        class CrashingExercise(Exercise):
             @property
             def name(self):
                 return "ex_b"
@@ -190,25 +190,28 @@ class TestSessionExecutor:
                 await ch.send(Message(type="text", content="from_b"))
                 raise RuntimeError("ex_b exploded")
 
-        ex_b = FailingExercise()
+        ex_b = CrashingExercise()
         ex_c = _make_exercise("ex_c", messages=[Message(type="text", content="from_c")])
 
         results = asyncio.run(SessionExecutor(channel).execute([ex_a, ex_b, ex_c], UserProfile()))
 
-        # Only two results — executor stopped after ex_b failed
-        assert len(results) == 2
+        assert len(results) == 3
         assert results[0].exercise_name == "ex_a"
         assert results[0].success is True
         assert results[1].exercise_name == "ex_b"
         assert results[1].success is False
+        assert results[2].exercise_name == "ex_c"
+        assert results[2].success is True
 
-        # ex_c's message was never sent
+        # All three exercises sent their messages (ex_b sent before crashing)
         sent_contents = [m.content for m in channel.sent]
-        assert "from_c" not in sent_contents
+        assert "from_a" in sent_contents
+        assert "from_b" in sent_contents
+        assert "from_c" in sent_contents
 
-    def test_stops_on_soft_failure(self):
-        """Exercise returning RunResult(completed=False) causes executor to stop;
-        result has success=False and data.reason equals the RunResult reason."""
+    def test_soft_failure_is_skipped(self):
+        """Exercise returning RunResult(completed=False) without waiting_for_user
+        is skipped; result has success=False and data.reason preserved."""
         channel = RecordingChannel()
 
         class SoftFailExercise(Exercise):
@@ -219,14 +222,44 @@ class TestSessionExecutor:
             async def run(self, ch, profile):
                 return RunResult(completed=False, reason="no words")
 
-        ex = SoftFailExercise()
-        results = asyncio.run(SessionExecutor(channel).execute([ex], UserProfile()))
+        next_ex = _make_exercise("next_ex")
+        results = asyncio.run(
+            SessionExecutor(channel).execute([SoftFailExercise(), next_ex], UserProfile())
+        )
 
-        assert len(results) == 1
+        assert len(results) == 2
         assert results[0].success is False
         assert results[0].exercise_name == "soft_fail_ex"
         assert results[0].data is not None
         assert results[0].data.reason == "no words"
+        # Next exercise still ran
+        assert results[1].success is True
+        assert results[1].exercise_name == "next_ex"
+
+    def test_waiting_for_user_interrupts_session(self):
+        """Exercise returning waiting_for_user=True stops the executor;
+        subsequent exercises are NOT run."""
+        channel = RecordingChannel()
+
+        class WaitingExercise(Exercise):
+            @property
+            def name(self):
+                return "interactive_ex"
+
+            async def run(self, ch, profile):
+                return RunResult(completed=False, reason="awaiting answer", waiting_for_user=True)
+
+        next_ex = _make_exercise("skipped_ex", messages=[Message(type="text", content="should_not_appear")])
+        results = asyncio.run(
+            SessionExecutor(channel).execute([WaitingExercise(), next_ex], UserProfile())
+        )
+
+        assert len(results) == 1
+        assert results[0].success is False
+        assert results[0].data.waiting_for_user is True
+        # Next exercise was never reached
+        sent_contents = [m.content for m in channel.sent]
+        assert "should_not_appear" not in sent_contents
 
 
 # ---------------------------------------------------------------------------
@@ -450,10 +483,9 @@ class TestSessionExecutorRetry:
 
 
 class TestBuildExecutionStateMidSession:
-    def test_mid_session_failure_has_correct_counts_and_names(self, tmp_path):
-        """When the second of three exercises fails, completed_count=1,
-        remaining_count=2, and incomplete_names contains the failed exercise plus
-        the unstarted one."""
+    def test_crash_mid_session_is_skipped_and_session_completes(self, tmp_path):
+        """When the second of three exercises crashes (soft fail, no waiting_for_user),
+        it is skipped, the third still runs, and the session completes."""
 
         class AlwaysSucceeds(Exercise):
             @property
@@ -464,13 +496,59 @@ class TestBuildExecutionStateMidSession:
                 await channel.send(Message(type="text", content="ok"))
                 return RunResult(completed=True)
 
-        class AlwaysFails(Exercise):
+        class AlwaysCrashes(Exercise):
             @property
             def name(self):
                 return "ex_second"
 
             async def run(self, channel, profile):
                 return RunResult(completed=False, reason="mid fail")
+
+        class StillRuns(Exercise):
+            @property
+            def name(self):
+                return "ex_third"
+
+            async def run(self, channel, profile):
+                return RunResult(completed=True)
+
+        channel = RecordingChannel()
+        with _registry_override([AlwaysSucceeds, AlwaysCrashes, StillRuns]):
+            asyncio.run(run_session(tmp_path, channel=channel, force=True))
+
+        state = load_state(tmp_path)
+
+        # Session completes — crash is just skipped
+        assert state.sessions_completed == 1
+        assert state.execution is None
+        # Only the two successful exercises are recorded
+        assert len(state.exercise_completions) == 2
+        completed_names = [ec.exercise_name for ec in state.exercise_completions]
+        assert "ex_first" in completed_names
+        assert "ex_third" in completed_names
+        assert "ex_second" not in completed_names
+
+    def test_waiting_mid_session_interrupts_with_correct_state(self, tmp_path):
+        """When the second of three exercises is waiting_for_user, the session
+        is interrupted. ExecutionState captures the waiting exercise, and the
+        third exercise never runs."""
+
+        class AlwaysSucceeds(Exercise):
+            @property
+            def name(self):
+                return "ex_first"
+
+            async def run(self, channel, profile):
+                await channel.send(Message(type="text", content="ok"))
+                return RunResult(completed=True)
+
+        class WaitsForUser(Exercise):
+            @property
+            def name(self):
+                return "ex_second"
+
+            async def run(self, channel, profile):
+                return RunResult(completed=False, reason="awaiting input", waiting_for_user=True)
 
         class NeverRan(Exercise):
             @property
@@ -481,7 +559,7 @@ class TestBuildExecutionStateMidSession:
                 return RunResult(completed=True)
 
         channel = RecordingChannel()
-        with _registry_override([AlwaysSucceeds, AlwaysFails, NeverRan]):
+        with _registry_override([AlwaysSucceeds, WaitsForUser, NeverRan]):
             asyncio.run(run_session(tmp_path, channel=channel, force=True))
 
         state = load_state(tmp_path)
@@ -492,7 +570,8 @@ class TestBuildExecutionStateMidSession:
         assert exec_state.completed_count == 1
         assert exec_state.remaining_count == 2
         assert exec_state.current_exercise_name == "ex_second"
-        assert exec_state.current_reason == "mid fail"
+        assert exec_state.current_reason == "awaiting input"
+        assert exec_state.current_waiting_for_user is True
         assert "ex_second" in exec_state.incomplete_names
         assert "ex_third" in exec_state.incomplete_names
         assert "ex_first" not in exec_state.incomplete_names

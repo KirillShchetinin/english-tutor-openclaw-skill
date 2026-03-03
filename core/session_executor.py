@@ -30,7 +30,12 @@ class SessionExecutor:
             result = await self._run_exercise(exercise, profile)
             results.append(result)
             if not result.success:
-                break
+                if result.data and result.data.waiting_for_user:
+                    break  # interactive exercise — interrupt session for resume
+                logger.error(
+                    "Skipping crashed exercise '%s', continuing session.",
+                    exercise.name,
+                )
         return results
 
     async def _run_exercise(

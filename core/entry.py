@@ -19,12 +19,14 @@ def _build_execution_state(
     exercises: list,
     results: list[ExerciseResult],
 ) -> ExecutionState:
-    """Build an ExecutionState snapshot from a stopped execution."""
-    completed_count = sum(1 for r in results if r.success)
+    """Build an ExecutionState snapshot from a session interrupted by a
+    waiting-for-user exercise.  Crashed (skipped) exercises are included in
+    incomplete_names alongside exercises that never ran."""
+    succeeded_names = {r.exercise_name for r in results if r.success}
+    completed_count = len(succeeded_names)
     last_result = results[-1]
     run_result = last_result.data
-    # incomplete_names: the exercise that stopped + all exercises never run
-    incomplete_names = [e.name for e in exercises[completed_count:]]
+    incomplete_names = [e.name for e in exercises if e.name not in succeeded_names]
     return ExecutionState(
         completed_count=completed_count,
         remaining_count=len(exercises) - completed_count,
@@ -56,6 +58,29 @@ async def _check_long_absence(
     save_state(data_path, state)
     await channel.done(status="ok")
     return True
+
+
+def _was_interrupted(results: list[ExerciseResult]) -> bool:
+    """True if the session was interrupted by an exercise waiting for user input."""
+    if not results:
+        return False
+    last = results[-1]
+    return not last.success and last.data is not None and last.data.waiting_for_user
+
+
+def _log_skipped_exercises(results: list[ExerciseResult], interrupted: bool) -> None:
+    """Log exercises that crashed and were skipped during the session."""
+    for r in results:
+        if r.success:
+            continue
+        # The interrupting (waiting) exercise is paused, not skipped.
+        if interrupted and r is results[-1]:
+            continue
+        logger.error(
+            "Exercise '%s' crashed and was skipped. reason=%s",
+            r.exercise_name,
+            r.data.reason if r.data else "exception",
+        )
 
 
 async def _notify_no_exercises(exercises: list, channel: OutputChannel) -> None:
@@ -117,9 +142,6 @@ async def run_session(
         executor = SessionExecutor(channel)
         results = await executor.execute(exercises, profile)
 
-        # Record successful completions.
-        # executor.execute() runs exercises serially and returns all results
-        # at once — a single save_state at the end of this block is sufficient.
         for result in results:
             if result.success:
                 state.exercise_completions.append(
@@ -129,30 +151,20 @@ async def run_session(
                     )
                 )
 
-        # An empty exercise list counts as a completed session (no failures possible).
-        all_succeeded = not results or results[-1].success
-        if all_succeeded:
+        interrupted = _was_interrupted(results)
+
+        if interrupted:
+            state.execution = _build_execution_state(exercises, results)
+        else:
             state.execution = None
             state.sessions_completed += 1
             state.last_completed_at = now.isoformat()
-        else:
-            state.execution = _build_execution_state(exercises, results)
 
         save_state(data_path, state)
 
-        if all_succeeded:
-            if PROFILE_REFRESH_INTERVAL > 0 and state.sessions_completed % PROFILE_REFRESH_INTERVAL == 0:
-                logger.info(
-                    "Profile refresh due (every %d sessions) -- not yet implemented.",
-                    PROFILE_REFRESH_INTERVAL,
-                )
-            logger.info(
-                "Session #%d completed. %d/%d exercises succeeded.",
-                state.sessions_completed,
-                sum(1 for r in results if r.success),
-                len(results),
-            )
-        else:
+        _log_skipped_exercises(results, interrupted)
+
+        if interrupted:
             logger.info(
                 "Session paused at '%s' (%d/%d completed). reason=%s waiting=%s",
                 state.execution.current_exercise_name,
@@ -160,6 +172,19 @@ async def run_session(
                 len(exercises),
                 state.execution.current_reason,
                 state.execution.current_waiting_for_user,
+            )
+        else:
+            if PROFILE_REFRESH_INTERVAL > 0 and state.sessions_completed % PROFILE_REFRESH_INTERVAL == 0:
+                logger.info(
+                    "Profile refresh due (every %d sessions) -- not yet implemented.",
+                    PROFILE_REFRESH_INTERVAL,
+                )
+            logger.info(
+                "Session #%d completed. %d/%d exercises succeeded, %d skipped.",
+                state.sessions_completed,
+                sum(1 for r in results if r.success),
+                len(exercises),
+                sum(1 for r in results if not r.success),
             )
 
         await channel.done(status="ok")
