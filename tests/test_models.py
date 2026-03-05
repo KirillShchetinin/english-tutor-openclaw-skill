@@ -9,8 +9,11 @@ from __future__ import annotations
 import pytest
 from unittest.mock import patch
 
-from models import Message, ExerciseCompletion, ExecutionState, SessionState, UserProfile
+import json
+
+from models import Message, ExerciseCompletion, ExecutionState, SessionState, StudentLevel, UserProfile
 from core.state_util import load_state, save_state, load_profile, save_profile
+from config import get_student_level, set_data_path
 
 
 # ---------------------------------------------------------------------------
@@ -242,3 +245,152 @@ class TestExecutionState:
 
         assert restored.execution is None
         assert restored.sessions_completed == 3
+
+
+# ---------------------------------------------------------------------------
+# StudentLevel
+# ---------------------------------------------------------------------------
+
+
+class TestStudentLevel:
+    # --- Parsing ---
+
+    def test_parse_full_format(self):
+        """'A2-3' parses to cefr='A2', sublevel=3."""
+        level = StudentLevel.parse("A2-3")
+        assert level.cefr == "A2"
+        assert level.sublevel == 3
+
+    def test_parse_bare_cefr(self):
+        """'A2' with no sublevel defaults to sublevel=1."""
+        level = StudentLevel.parse("A2")
+        assert level.cefr == "A2"
+        assert level.sublevel == 1
+
+    def test_parse_all_bands(self):
+        """All six CEFR bands parse without error."""
+        for band in ["A1", "A2", "B1", "B2", "C1", "C2"]:
+            level = StudentLevel.parse(f"{band}-3")
+            assert level.cefr == band
+            assert level.sublevel == 3
+
+    def test_parse_invalid_band_raises(self):
+        """An unknown CEFR band raises ValueError."""
+        with pytest.raises(ValueError, match="Unknown CEFR band"):
+            StudentLevel.parse("D1-2")
+
+    def test_parse_sublevel_out_of_range_raises(self):
+        """Sublevels 0 and 6 are outside the valid range and raise ValueError."""
+        with pytest.raises(ValueError, match="out of range"):
+            StudentLevel.parse("A1-0")
+        with pytest.raises(ValueError, match="out of range"):
+            StudentLevel.parse("A1-6")
+
+    def test_parse_empty_string_raises(self):
+        """Empty string raises ValueError."""
+        with pytest.raises(ValueError):
+            StudentLevel.parse("")
+
+    # --- Ordinals ---
+
+    def test_ordinal_boundaries(self):
+        """A1-1 maps to ordinal 1 and C2-5 maps to ordinal 30."""
+        assert StudentLevel.parse("A1-1").to_ordinal() == 1
+        assert StudentLevel.parse("C2-5").to_ordinal() == 30
+
+    def test_from_ordinal_round_trip(self):
+        """from_ordinal(to_ordinal(x)) == x for every position 1-30."""
+        for n in range(1, 31):
+            level = StudentLevel.from_ordinal(n)
+            assert level.to_ordinal() == n
+
+    def test_from_ordinal_out_of_range_raises(self):
+        """Ordinals 0 and 31 are out of range and raise ValueError."""
+        with pytest.raises(ValueError, match="out of range"):
+            StudentLevel.from_ordinal(0)
+        with pytest.raises(ValueError, match="out of range"):
+            StudentLevel.from_ordinal(31)
+
+    # --- Comparison ---
+
+    def test_less_than(self):
+        """A1-2 is less than A1-3."""
+        assert StudentLevel.parse("A1-2") < StudentLevel.parse("A1-3")
+
+    def test_equal(self):
+        """Two levels with the same band and sublevel are equal."""
+        assert StudentLevel.parse("B2-4") == StudentLevel.parse("B2-4")
+
+    def test_greater_than_across_bands(self):
+        """B1-1 is greater than A2-5."""
+        assert StudentLevel.parse("B1-1") > StudentLevel.parse("A2-5")
+
+    # --- Difficulty window ---
+
+    def test_window_mid_range(self):
+        """A2-2 window: one sublevel below band start (A1-5) to one above band end (B1-1)."""
+        low, high = StudentLevel.parse("A2-2").difficulty_window()
+        assert low == StudentLevel.parse("A1-5")
+        assert high == StudentLevel.parse("B1-1")
+
+    def test_window_bottom_clamp(self):
+        """A1-3 window: clamps at A1-1 on the low end (no band below A1)."""
+        low, high = StudentLevel.parse("A1-3").difficulty_window()
+        assert low == StudentLevel.parse("A1-1")
+        assert high == StudentLevel.parse("A2-1")
+
+    def test_window_top_clamp(self):
+        """C2-4 window: clamps at C2-5 on the high end (no band above C2)."""
+        low, high = StudentLevel.parse("C2-4").difficulty_window()
+        assert low == StudentLevel.parse("C1-5")
+        assert high == StudentLevel.parse("C2-5")
+
+    # --- Str ---
+
+    def test_str_format(self):
+        """str() returns the canonical 'BAND-sublevel' format."""
+        assert str(StudentLevel.parse("B2-4")) == "B2-4"
+
+
+# ---------------------------------------------------------------------------
+# get_student_level (config.py)
+# ---------------------------------------------------------------------------
+
+
+class TestGetStudentLevel:
+    def test_reads_config_and_returns_level(self, tmp_path):
+        """Writes config.json with student_level and verifies the returned level."""
+        # conftest.py writes A1-1 by default; overwrite with a different level.
+        (tmp_path / "config.json").write_text(
+            json.dumps({"student_level": "B2-3"}), encoding="utf-8"
+        )
+        set_data_path(tmp_path)
+        try:
+            level = get_student_level()
+        finally:
+            set_data_path(None)
+        assert level == StudentLevel.parse("B2-3")
+        assert level.cefr == "B2"
+        assert level.sublevel == 3
+
+    def test_missing_file_raises(self, tmp_path):
+        """No config.json → RuntimeError mentioning config.json."""
+        (tmp_path / "config.json").unlink()
+        set_data_path(tmp_path)
+        try:
+            with pytest.raises(RuntimeError, match="config.json"):
+                get_student_level()
+        finally:
+            set_data_path(None)
+
+    def test_missing_key_raises(self, tmp_path):
+        """config.json without student_level key → RuntimeError."""
+        (tmp_path / "config.json").write_text(
+            json.dumps({"other_key": "value"}), encoding="utf-8"
+        )
+        set_data_path(tmp_path)
+        try:
+            with pytest.raises(RuntimeError, match="student_level"):
+                get_student_level()
+        finally:
+            set_data_path(None)

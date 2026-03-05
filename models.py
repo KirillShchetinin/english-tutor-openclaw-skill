@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import functools
 from dataclasses import dataclass, field
+from typing import ClassVar
 
 
 @dataclass
@@ -141,3 +143,78 @@ class UserProfile:
             weak_spots=list(data.get("weak_spots", [])),
             strong_topics=list(data.get("strong_topics", [])),
         )
+
+
+@functools.total_ordering
+@dataclass(frozen=True)
+class StudentLevel:
+    """CEFR level with sublevel (e.g. A2-3). 30 ordinal positions total."""
+
+    CEFR_BANDS: ClassVar[list[str]] = ["A1", "A2", "B1", "B2", "C1", "C2"]
+
+    cefr: str
+    sublevel: int
+
+    @classmethod
+    def parse(cls, s: str) -> StudentLevel:
+        """Parse 'A2-3' or bare 'A2' (defaults sublevel to 1)."""
+        parts = s.split("-", 1)
+        cefr = parts[0]
+        if cefr not in cls.CEFR_BANDS:
+            raise ValueError(
+                f"Unknown CEFR band '{cefr}' — "
+                f"expected one of {cls.CEFR_BANDS}"
+            )
+        if len(parts) == 2:
+            try:
+                sublevel = int(parts[1])
+            except ValueError:
+                raise ValueError(
+                    f"Invalid sublevel '{parts[1]}' in '{s}' — must be an integer 1-5"
+                )
+        else:
+            sublevel = 1
+        if sublevel < 1 or sublevel > 5:
+            raise ValueError(
+                f"Sublevel {sublevel} out of range in '{s}' — must be 1-5"
+            )
+        return cls(cefr=cefr, sublevel=sublevel)
+
+    def to_ordinal(self) -> int:
+        """Flat integer 1-30 for comparison (A1-1=1 ... C2-5=30)."""
+        band_index = self.CEFR_BANDS.index(self.cefr)
+        return band_index * 5 + self.sublevel
+
+    @classmethod
+    def from_ordinal(cls, n: int) -> StudentLevel:
+        """Inverse of to_ordinal. Raises ValueError if not in [1, 30]."""
+        if n < 1 or n > 30:
+            raise ValueError(f"Ordinal {n} out of range — must be 1-30")
+        band_index = (n - 1) // 5
+        sublevel = (n - 1) % 5 + 1
+        return cls(cefr=cls.CEFR_BANDS[band_index], sublevel=sublevel)
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, StudentLevel):
+            return NotImplemented
+        return self.to_ordinal() == other.to_ordinal()
+
+    def __lt__(self, other: object) -> bool:
+        if not isinstance(other, StudentLevel):
+            return NotImplemented
+        return self.to_ordinal() < other.to_ordinal()
+
+    def __hash__(self) -> int:
+        return hash(self.to_ordinal())
+
+    def difficulty_window(self) -> tuple[StudentLevel, StudentLevel]:
+        """Full current CEFR band plus a 1-sublevel buffer on each side."""
+        band_index = self.CEFR_BANDS.index(self.cefr)
+        band_start = band_index * 5 + 1
+        band_end = band_index * 5 + 5
+        low = max(1, band_start - 1)
+        high = min(30, band_end + 1)
+        return (StudentLevel.from_ordinal(low), StudentLevel.from_ordinal(high))
+
+    def __str__(self) -> str:
+        return f"{self.cefr}-{self.sublevel}"

@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
+
+from models import StudentLevel
 
 WORKSPACE_DATA_PATH: Path = Path("data/skills/english-tutor/")
 SESSION_PUSH_TIMES: list[str] = ["09:00", "14:00", "20:00"]
@@ -30,3 +33,20 @@ def reset_data_path() -> None:
     """Reset the active data path to the default. Called after session ends."""
     global _active_data_path
     _active_data_path = None
+
+
+def get_student_level() -> StudentLevel:
+    """Read student_level from <data_path>/config.json. Raises if missing."""
+    path = get_data_path() / "config.json"
+    if not path.exists():
+        raise RuntimeError(
+            f"config.json not found at {path} "
+            "— OpenClaw must write it before the first session"
+        )
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if "student_level" not in data:
+        raise RuntimeError(
+            f"'student_level' key missing in {path} "
+            "— OpenClaw must set it before the first session"
+        )
+    return StudentLevel.parse(data["student_level"])

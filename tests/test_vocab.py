@@ -43,7 +43,7 @@ def _make_vocab(n: int, *, is_learning: bool = True) -> dict:
             "en": f"{prefix}{i}",
             "ru": f"{ru_prefix}{i}",
             "topic": "greetings",
-            "difficulty": "A1",
+            "difficulty": "A1-3",
             "is_learning": is_learning,
             "times_shown": times_shown,
             "times_tested": 0,
@@ -86,9 +86,19 @@ class TestVocabFirstRun:
             assert path.exists()
             assert isinstance(json.loads(path.read_text(encoding="utf-8")), dict)
 
-    def test_missing_seed_file_raises(self, vocab_ex):
-        """If the seed file is absent, _load_state propagates FileNotFoundError."""
-        with patch("shutil.copy2", side_effect=FileNotFoundError("seed gone")):
+    def test_missing_seed_file_raises(self, tmp_path, vocab_ex):
+        """If the seed file is absent, _load_state raises FileNotFoundError."""
+        # word_bank.json is absent (fresh tmp_path), so _load_state reads the seed.
+        # Patch Path.read_text so it raises FileNotFoundError for the seed file.
+        from pathlib import Path as _RealPath
+        real_read_text = _RealPath.read_text
+
+        def _fake_read_text(self, **kwargs):
+            if self.name == "word_bank_seed.json":
+                raise FileNotFoundError(f"seed gone: {self}")
+            return real_read_text(self, **kwargs)
+
+        with patch("pathlib.Path.read_text", _fake_read_text):
             with pytest.raises(FileNotFoundError):
                 vocab_ex._load_state()
 
@@ -117,7 +127,7 @@ class TestReplenishment:
         state = vocab_ex._load_state()
         state.vocab = _make_vocab(ACTIVE_POOL_SIZE)
         state.word_bank = {
-            "greetings": [{"en": "hello", "ru": "privet", "difficulty": "A1"}]
+            "greetings": [{"en": "hello", "ru": "privet", "difficulty": "A1-3"}]
         }
         state.topics = {"greetings": {"started": True, "word_count": ACTIVE_POOL_SIZE}}
 
@@ -132,14 +142,14 @@ class TestReplenishment:
             vocab={
                 "hello": {
                     "en": "hello", "ru": "privet", "topic": "greetings",
-                    "difficulty": "A1", "is_learning": True, "times_shown": 0,
+                    "difficulty": "A1-3", "is_learning": True, "times_shown": 0,
                     "times_tested": 0, "results": [], "last_seen": None,
                 }
             },
             word_bank={
                 "greetings": [
-                    {"en": "hello", "ru": "privet", "difficulty": "A1"},
-                    {"en": "goodbye", "ru": "poka", "difficulty": "A1"},
+                    {"en": "hello", "ru": "privet", "difficulty": "A1-3"},
+                    {"en": "goodbye", "ru": "poka", "difficulty": "A1-3"},
                 ]
             },
             topics={"greetings": {"started": True, "word_count": 1}},
@@ -393,3 +403,58 @@ class TestUpdateState:
 
         # Orphan silently skipped
         assert "ghost" not in state.vocab
+
+
+# ---------------------------------------------------------------------------
+# Difficulty filtering
+# ---------------------------------------------------------------------------
+
+
+class TestDifficultyFiltering:
+    def test_first_run_filters_seed_by_difficulty(self, tmp_path, vocab_ex):
+        """word_bank.json written on first run contains only words within the level window.
+
+        conftest writes config.json with student_level=A1-1.
+        Window for A1-1 is A1-1 (ordinal 1) to A2-1 (ordinal 6).
+        The seed has words at A2-3 (ordinal 8), B1-3, and B2-3 — all out of window.
+        None of those should appear in the persisted word bank.
+        """
+        vocab_ex._load_state()
+
+        word_bank_path = tmp_path / "vocab" / WORD_BANK_FILE
+        assert word_bank_path.exists()
+        word_bank = json.loads(word_bank_path.read_text(encoding="utf-8"))
+
+        out_of_window = {"A2-3", "B1-3", "B2-3", "C1-3", "C2-3"}
+        for topic, words in word_bank.items():
+            for word in words:
+                assert word["difficulty"] not in out_of_window, (
+                    f"Out-of-window word '{word['en']}' (difficulty={word['difficulty']}) "
+                    f"found in topic '{topic}'"
+                )
+
+    def test_replenish_skips_out_of_window_words(self, tmp_path, vocab_ex):
+        """_replenish_pool ignores bank words whose difficulty falls outside the window.
+
+        conftest writes config.json with student_level=A1-1.
+        Window: A1-1 to A2-1. We inject one in-window word (A1-3) and one
+        out-of-window word (B2-3) into the bank.  Only the in-window word
+        should be added to the active vocab.
+        """
+        state = VocabState(
+            vocab={},
+            word_bank={
+                "greetings": [
+                    {"en": "hello", "ru": "привет", "difficulty": "A1-3"},
+                    {"en": "sophisticated", "ru": "изощрённый", "difficulty": "B2-3"},
+                ]
+            },
+            topics={"greetings": {"started": True, "word_count": 0}},
+        )
+
+        vocab_ex._replenish_pool(state)
+
+        assert "hello" in state.vocab, "In-window word must be added to active pool"
+        assert "sophisticated" not in state.vocab, (
+            "Out-of-window word must not be added to active pool"
+        )

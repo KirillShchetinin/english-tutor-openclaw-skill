@@ -3,14 +3,13 @@ from __future__ import annotations
 import json
 import logging
 import random
-import shutil
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
 from channels.base import OutputChannel
-from models import Message, UserProfile
-from config import get_data_path
+from models import Message, StudentLevel, UserProfile
+from config import get_data_path, get_student_level
 from messages import VOCAB_EMPTY, VOCAB_HEADER, VOCAB_RECALL_HINT
 from exercises.base import Exercise, RunResult
 from exercises.registry import register_exercise
@@ -79,9 +78,11 @@ class VocabExercise(Exercise):
 
         # Word bank
         word_bank_path = data_dir / WORD_BANK_FILE
+        # Known limitation: existing word_bank.json files from before difficulty
+        # filtering are not retroactively filtered. The belt-and-suspenders check
+        # in _replenish_pool handles this at the pool level.
         if not word_bank_path.exists():
-            seed_path = Path(__file__).parent / "data" / "word_bank_seed.json"
-            shutil.copy2(seed_path, word_bank_path)
+            self._init_word_bank(word_bank_path)
         word_bank = json.loads(word_bank_path.read_text(encoding="utf-8"))
 
         # Topics
@@ -103,6 +104,33 @@ class VocabExercise(Exercise):
 
         return VocabState(vocab=vocab, word_bank=word_bank, topics=topics)
 
+    def _init_word_bank(self, word_bank_path: Path) -> None:
+        seed_path = Path(__file__).parent / "data" / "word_bank_seed.json"
+        seed = json.loads(seed_path.read_text(encoding="utf-8"))
+        level = get_student_level()
+        low, high = level.difficulty_window()
+        filtered: dict[str, list] = {}
+        for topic, words in seed.items():
+            kept = []
+            for word in words:
+                try:
+                    word_level = StudentLevel.parse(word["difficulty"])
+                except (ValueError, KeyError):
+                    continue
+                if low <= word_level <= high:
+                    kept.append(word)
+            filtered[topic] = kept
+        total_words = sum(len(ws) for ws in filtered.values())
+        if total_words == 0:
+            raise RuntimeError(
+                f"Filtered word bank is empty — student level {level} "
+                "has no matching words in the seed. Check config.json."
+            )
+        word_bank_path.write_text(
+            json.dumps(filtered, indent=2, ensure_ascii=False),
+            encoding="utf-8",
+        )
+
     def _replenish_pool(self, state: VocabState) -> None:
         active_count = sum(1 for w in state.vocab.values() if w["is_learning"])
         if active_count >= ACTIVE_POOL_SIZE:
@@ -117,10 +145,19 @@ class VocabExercise(Exercise):
         existing_en = {w["en"] for w in state.vocab.values()}
         added = 0
 
+        level = get_student_level()
+        low, high = level.difficulty_window()
+
         for word in bank_words:
             if added >= needed:
                 break
             if word["en"] in existing_en:
+                continue
+            try:
+                word_level = StudentLevel.parse(word["difficulty"])
+            except (ValueError, KeyError):
+                continue
+            if not (low <= word_level <= high):
                 continue
 
             state.vocab[word["en"]] = {
