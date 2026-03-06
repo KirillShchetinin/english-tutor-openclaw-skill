@@ -7,11 +7,12 @@ The `VocabExercise` shows 10 words per session (passive exposure). There is no a
 ## 2. Goal
 
 Create `VocabTestExercise` — a multi-turn interactive exercise that:
-1. Picks 5 learning words from vocab state
+1. Picks 5 words for testing: 4 learning words + 1 graduated review word (adapts when pools are short)
 2. Asks one at a time: "Как по-английски «яблоко»?"
 3. Waits for user reply, evaluates answer (fuzzy match)
 4. Sends feedback (correct/incorrect)
 5. After all 5: sends summary, updates vocab state with test results
+6. Graduated words answered wrong re-enter the learning pool (re-entry rule from design doc Section 3.1)
 
 ---
 
@@ -54,7 +55,9 @@ Both graduation mechanisms run independently:
 - VocabTestExercise: `results[-4:]` has 3+ correct → `is_learning = False`
 - Re-entry: graduated word tested wrong → `is_learning = True` (explicit product requirement from design doc Section 3.1)
 
-No conflict: exercises run sequentially, VocabTestExercise only picks `is_learning=True` words.
+**Re-entry is enabled by review word selection.** VocabTestExercise picks 1 graduated word per quiz (review slot). If the user gets it wrong, `_apply_graduation` sets `is_learning = True`, returning the word to the learning pool. This matches the word lifecycle in the feature design doc (Section 4: "Occasionally reviewed → wrong? → isLearning: true").
+
+**Interaction with VocabExercise graduation:** VocabExercise graduates words by show count (`times_shown >= 8`). A re-entered word with `times_shown >= 8` will be re-graduated by VocabExercise on the next session. This is acceptable — the word gets one more round of exposure before graduating again. If the user keeps failing it in tests, it keeps re-entering.
 
 ---
 
@@ -75,8 +78,10 @@ No conflict: exercises run sequentially, VocabTestExercise only picks `is_learni
 | File | Change |
 |---|---|
 | `exercises/vocab.py` | Replace `_load_state`, `_save_state`, `_atomic_write`, `VocabState` with imports from `vocab_store` |
-| `exercises/__init__.py` | Add `from exercises.vocab_test import VocabTestExercise` |
+| `exercises/__init__.py` | Add `from exercises.vocab_test import VocabTestExercise` (must come after vocab import — execution order follows import order) |
 | `messages.py` | Add 6 Russian message constants |
+| `tests/test_vocab.py` | Update imports if `VocabState` moves to `vocab_store` (or re-export from `vocab.py`) |
+| `tests/helpers.py` | Update `RecordingChannel.send()` to return a string token instead of `None` |
 
 ---
 
@@ -142,18 +147,33 @@ def evaluate_answer(user_input: str, expected: str) -> AnswerResult
 
 ```python
 WORDS_PER_TEST = 5
+LEARNING_SLOTS = 4
+REVIEW_SLOTS = 1
+MIN_TIMES_SHOWN = 2       # minimum exposure before a word is test-eligible
 GRADUATION_WINDOW = 4
 GRADUATION_THRESHOLD = 3
 ```
 
-### Word Selection (`_pick_words`)
+### Word Selection (`_pick_test_words`)
 
-1. Filter `is_learning == True` from vocab state
-2. Sort by `times_tested` ascending, then `times_shown` descending (least-tested first, most-shown-but-untested as tiebreaker)
-3. Take first `min(5, len(pool))`
-4. Shuffle selected words
+Test word selection is distinct from show-cards selection (`VocabExercise._pick_words`). Show-cards optimizes for passive exposure (random shuffle, 20% review probability). Test selection optimizes for active recall readiness.
 
-If 0 words available: send fallback message, return `RunResult(completed=True)`.
+**Two pools:**
+
+1. **Learning pool:** `is_learning == True` AND `times_shown >= MIN_TIMES_SHOWN`
+   - Sorted by `times_tested` ascending (least-tested first)
+   - Take up to `LEARNING_SLOTS` (4)
+
+2. **Review pool:** `is_learning == False` (graduated words)
+   - Sorted by `times_tested` ascending (least-recently-tested first)
+   - Take up to `REVIEW_SLOTS` (1)
+
+**Fallback when pools are short:**
+- Not enough learning words → fill remaining slots from review pool
+- No review words → fill all slots from learning pool
+- Zero total eligible words → send fallback message, return `RunResult(completed=True)`
+
+**Final step:** Shuffle selected words so quiz order is unpredictable.
 
 ### `run(channel, profile) -> RunResult`
 
@@ -265,8 +285,10 @@ VOCAB_TEST_EMPTY = "Пока нет слов для проверки. Скоро
 | `quiz_state.json` missing on `reply()` | `RunResult(completed=False, reason="quiz_state_lost")` — framework skips |
 | `quiz_state.json` corrupted | Catch `JSONDecodeError`, delete, treat as missing |
 | vocab `state.json` missing on `run()` | `load_vocab_state()` returns empty dict → fallback message, `completed=True` |
-| Fewer than 5 `is_learning` words | Quiz with however many available (1-4) |
-| Zero `is_learning` words | Fallback message, `completed=True` |
+| Fewer than 5 eligible words | Fill from the other pool; quiz with however many available (1-4) |
+| Zero eligible words (no learning with `times_shown >= 2`, no graduated) | Fallback message, `completed=True` |
+| No graduated words available | All slots filled from learning pool |
+| Only graduated words available (no test-eligible learning words) | All slots filled from review pool |
 | Empty user input | `evaluate_answer` handles: `correct=False` |
 | `channel.send()` raises | Exception propagates; executor retries (1 attempt per config) |
 | Word disappears from vocab state between turns | `_apply_results()` re-reads state; missing keys silently skipped |
@@ -287,22 +309,22 @@ VOCAB_TEST_EMPTY = "Пока нет слов для проверки. Скоро
 
 ## 12. Test Strategy
 
+Focus on behavior that matters. No redundant coverage.
+
 ### `tests/test_answer_eval.py`
-- Exact match, case insensitive, extra whitespace
-- Fuzzy: one typo short word (accept), one typo long word (accept), too many typos (reject)
-- Empty input, multi-word phrases, completely wrong answer
+- Exact match, case variations, extra whitespace
+- Fuzzy: typo within threshold (accept), typo beyond threshold (reject)
+- Empty input
 
 ### `tests/test_vocab_test.py`
 
-**TestVocabTestRun:** sends header + question, creates quiz_state, handles empty vocab, cleans stale state, handles <5 words
+**TestFullQuiz:** The main test. `run()` → 5 `reply()` calls → completion. Verifies: quiz_state created and deleted, vocab state updated (times_tested, results[]), summary sent.
 
-**TestVocabTestReply:** correct/wrong feedback, advances stage, missing quiz_state → soft failure
+**TestWordSelection:** learning pool respects `times_shown >= 2`, review slot picks graduated word, fallback fills from other pool when one is empty.
 
-**TestVocabTestFullQuiz:** run → 5 replies → completion. Verify summary, quiz_state deleted, vocab state updated (times_tested, results[])
+**TestGraduation:** graduation after passing threshold, re-entry when graduated word answered wrong.
 
-**TestGraduation:** graduation after passing threshold, no graduation below threshold, re-entry on wrong answer
-
-**TestWordSelection:** least-tested priority, tiebreaker by most-shown, only is_learning words
+**TestEdgeCases:** empty vocab → fallback message, stale quiz_state on `run()` → cleaned up.
 
 ---
 
