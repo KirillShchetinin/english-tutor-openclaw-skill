@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from channels.base import OutputChannel
 from config import get_data_path
 from exercises.base import InteractiveExercise, RunResult
+from exercises.registry import register_exercise
 from exercises.vocab.helpers import (
     VOCAB_STATE_DIR,
     VocabState,
@@ -116,6 +117,7 @@ GRADUATION_WINDOW = 4
 GRADUATION_THRESHOLD = 3
 
 
+@register_exercise
 class VocabQuizExercise(InteractiveExercise):
     @property
     def name(self) -> str:
