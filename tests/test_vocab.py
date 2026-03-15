@@ -213,7 +213,8 @@ class TestPickWords:
         """With enough active words, returns exactly WORDS_PER_SESSION, never more."""
         state = VocabState(
             vocab={**_make_vocab(ACTIVE_POOL_SIZE), **_make_vocab(20, is_learning=False)},
-            word_bank={}, topics={},
+            word_bank={},
+            topics={"greetings": {"word_count": 0, "started": True}},
         )
 
         for seed_val in [0.05, 0.5, 0.95]:
@@ -224,7 +225,10 @@ class TestPickWords:
     def test_fewer_active_than_session_size_returns_all(self, vocab_ex):
         """When fewer active words exist than WORDS_PER_SESSION, all of them are returned."""
         n = WORDS_PER_SESSION - 2
-        state = VocabState(vocab=_make_vocab(n), word_bank={}, topics={})
+        state = VocabState(
+            vocab=_make_vocab(n), word_bank={},
+            topics={"greetings": {"word_count": 0, "started": True}},
+        )
 
         with patch("random.random", return_value=1.0):
             words = vocab_ex._pick_words(state)
@@ -234,7 +238,10 @@ class TestPickWords:
     def test_review_slot_controlled_by_random(self, vocab_ex):
         """Review slot includes graduated word when random < threshold, excludes otherwise."""
         vocab = {**_make_vocab(10), **_make_vocab(5, is_learning=False)}
-        state = VocabState(vocab=vocab, word_bank={}, topics={})
+        state = VocabState(
+            vocab=vocab, word_bank={},
+            topics={"greetings": {"word_count": 0, "started": True}},
+        )
 
         # Below threshold — one graduated word included
         with patch("random.random", return_value=0.1):

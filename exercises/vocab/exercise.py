@@ -130,8 +130,15 @@ class VocabExercise(Exercise):
         active = [w for w in state.vocab.values() if w["is_learning"]]
         graduated = [w for w in state.vocab.values() if not w["is_learning"]]
 
-        random.shuffle(active)
-        random.shuffle(graduated)
+        # Pick from the most recently started topic that still has active words.
+        started = [t for t in state.topics if state.topics[t]["started"]]
+        topic_words = []
+        for topic in reversed(started):
+            topic_words = [w for w in active if w["topic"] == topic]
+            if topic_words:
+                break
+
+        random.shuffle(topic_words)
 
         result: list[dict] = []
         review_slot = (
@@ -139,8 +146,9 @@ class VocabExercise(Exercise):
         )
         active_slots = WORDS_PER_SESSION - review_slot
 
-        result.extend(active[:active_slots])
+        result.extend(topic_words[:active_slots])
         if review_slot:
+            random.shuffle(graduated)
             result.extend(graduated[:review_slot])
 
         return result[:WORDS_PER_SESSION]

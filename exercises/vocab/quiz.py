@@ -146,10 +146,26 @@ class VocabQuizExercise(InteractiveExercise):
 
     # -- word selection ------------------------------------------------
 
+    def _current_topic(self, state: VocabState) -> str | None:
+        """Most recently started topic that still has active learning words."""
+        started = [t for t in state.topics if state.topics[t]["started"]]
+        for topic in reversed(started):
+            if any(
+                w["topic"] == topic and w["is_learning"]
+                and w["times_shown"] >= MIN_TIMES_SHOWN
+                for w in state.vocab.values()
+            ):
+                return topic
+        return None
+
     def _pick_test_words(self, state: VocabState) -> list[dict]:
+        # Focus on the most recently started topic with eligible words.
+        topic = self._current_topic(state)
+
         learning = [
             w for w in state.vocab.values()
             if w["is_learning"] and w["times_shown"] >= MIN_TIMES_SHOWN
+            and (topic is None or w["topic"] == topic)
         ]
         review = [
             w for w in state.vocab.values()
