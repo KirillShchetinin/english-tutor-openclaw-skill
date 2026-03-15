@@ -23,3 +23,11 @@ EXERCISE_UNAVAILABLE = "Упражнение больше недоступно. 
 VOCAB_EMPTY = "Словарь пока пуст. Скоро добавим новые слова!"
 VOCAB_HEADER = "📖 **Словарный запас**"
 VOCAB_RECALL_HINT = "Попробуй вспомнить английские слова, прежде чем читать их!"
+
+# exercises/vocab_test.py
+VOCAB_TEST_HEADER = "✏️ **Проверка слов**\nНапиши английское слово по его переводу."
+VOCAB_TEST_QUESTION = "({index}/{total}) Как по-английски **'{ru_word}'**?"
+VOCAB_TEST_CORRECT = "Правильно! **{en_word}** ✅"
+VOCAB_TEST_INCORRECT = "Не совсем. Правильный ответ: **{en_word}** (ты написал: {user_answer})"
+VOCAB_TEST_SUMMARY = "Результат: {correct}/{total} правильно!"
+VOCAB_TEST_EMPTY = "Пока нет слов для проверки. Скоро появятся!"

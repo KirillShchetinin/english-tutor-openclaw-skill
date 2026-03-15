@@ -12,20 +12,23 @@ from unittest.mock import patch
 
 import pytest
 
-from exercises.vocab import (
+from exercises.vocab.exercise import (
     VocabExercise,
-    VocabState,
     ACTIVE_POOL_SIZE,
-    GRADUATION_SHOW_COUNT,
-    STATE_FILE,
-    TOPICS_FILE,
     TOPIC_FULL_THRESHOLD,
-    WORD_BANK_FILE,
     WORDS_PER_SESSION,
 )
-from channels.base import OutputChannel
+from exercises.vocab.helpers import (
+    VocabState,
+    load_vocab_state,
+    atomic_write,
+    STATE_FILE,
+    TOPICS_FILE,
+    WORD_BANK_FILE,
+)
 from config import set_data_path
-from models import Message, UserProfile
+from models import UserProfile
+from tests.helpers import RecordingChannel
 
 
 # ---------------------------------------------------------------------------
@@ -37,7 +40,7 @@ def _make_vocab(n: int, *, is_learning: bool = True) -> dict:
     """Return a vocab dict with n words in the given learning state."""
     prefix = "word" if is_learning else "grad"
     ru_prefix = "ru" if is_learning else "gru"
-    times_shown = 0 if is_learning else GRADUATION_SHOW_COUNT
+    times_shown = 0 if is_learning else 8
     return {
         f"{prefix}{i}": {
             "en": f"{prefix}{i}",
@@ -52,14 +55,6 @@ def _make_vocab(n: int, *, is_learning: bool = True) -> dict:
         }
         for i in range(n)
     }
-
-
-class _RecordingChannel(OutputChannel):
-    def __init__(self):
-        self.sent: list[Message] = []
-
-    async def send(self, message: Message) -> None:
-        self.sent.append(message)
 
 
 @pytest.fixture()
@@ -78,7 +73,7 @@ def vocab_ex(tmp_path):
 class TestVocabFirstRun:
     def test_first_run_initializes_files_from_seed(self, tmp_path, vocab_ex):
         """On a fresh data path, run() creates word_bank, topics, and state files."""
-        asyncio.run(vocab_ex.run(_RecordingChannel(), UserProfile()))
+        asyncio.run(vocab_ex.run(RecordingChannel(), UserProfile()))
 
         vocab_dir = tmp_path / "vocab"
         for name in (WORD_BANK_FILE, TOPICS_FILE, STATE_FILE):
@@ -87,8 +82,8 @@ class TestVocabFirstRun:
             assert isinstance(json.loads(path.read_text(encoding="utf-8")), dict)
 
     def test_missing_seed_file_raises(self, tmp_path, vocab_ex):
-        """If the seed file is absent, _load_state raises FileNotFoundError."""
-        # word_bank.json is absent (fresh tmp_path), so _load_state reads the seed.
+        """If the seed file is absent, load_vocab_state raises FileNotFoundError."""
+        # word_bank.json is absent (fresh tmp_path), so load_vocab_state reads the seed.
         # Patch Path.read_text so it raises FileNotFoundError for the seed file.
         from pathlib import Path as _RealPath
         real_read_text = _RealPath.read_text
@@ -100,7 +95,7 @@ class TestVocabFirstRun:
 
         with patch("pathlib.Path.read_text", _fake_read_text):
             with pytest.raises(FileNotFoundError):
-                vocab_ex._load_state()
+                load_vocab_state("vocab")
 
 
 # ---------------------------------------------------------------------------
@@ -111,7 +106,7 @@ class TestVocabFirstRun:
 class TestReplenishment:
     def test_empty_pool_is_filled_from_word_bank(self, vocab_ex):
         """When active pool is empty, replenish pulls words from the selected topic."""
-        state = vocab_ex._load_state()
+        state = load_vocab_state("vocab")
         assert len(state.vocab) == 0
 
         vocab_ex._replenish_pool(state)
@@ -124,7 +119,7 @@ class TestReplenishment:
 
     def test_full_pool_is_not_replenished(self, vocab_ex):
         """When active count already equals ACTIVE_POOL_SIZE, no words are added."""
-        state = vocab_ex._load_state()
+        state = load_vocab_state("vocab")
         state.vocab = _make_vocab(ACTIVE_POOL_SIZE)
         state.word_bank = {
             "greetings": [{"en": "hello", "ru": "privet", "difficulty": "A1-3"}]
@@ -162,33 +157,6 @@ class TestReplenishment:
 
 
 # ---------------------------------------------------------------------------
-# Graduation
-# ---------------------------------------------------------------------------
-
-
-class TestGraduation:
-    def test_graduation_lifecycle(self, vocab_ex):
-        """Words graduate at threshold and stay graduated; below threshold stays active."""
-        vocab = _make_vocab(1)
-        key = next(iter(vocab))
-
-        # Below threshold — stays learning
-        vocab[key]["times_shown"] = GRADUATION_SHOW_COUNT - 1
-        vocab_ex._check_graduations(vocab)
-        assert vocab[key]["is_learning"] is True
-
-        # At threshold — graduates
-        vocab[key]["times_shown"] = GRADUATION_SHOW_COUNT
-        vocab_ex._check_graduations(vocab)
-        assert vocab[key]["is_learning"] is False
-
-        # Already graduated — stays graduated (no flip-back)
-        vocab[key]["times_shown"] = GRADUATION_SHOW_COUNT + 10
-        vocab_ex._check_graduations(vocab)
-        assert vocab[key]["is_learning"] is False
-
-
-# ---------------------------------------------------------------------------
 # Topic selection
 # ---------------------------------------------------------------------------
 
@@ -196,7 +164,7 @@ class TestGraduation:
 class TestTopicSelection:
     def test_starts_first_topic_when_none_started(self, vocab_ex):
         """When no topic is started, _select_topic starts the first one."""
-        state = vocab_ex._load_state()
+        state = load_vocab_state("vocab")
         assert all(not t["started"] for t in state.topics.values())
 
         selected = vocab_ex._select_topic(state.topics)
@@ -205,7 +173,7 @@ class TestTopicSelection:
 
     def test_picks_started_topic_with_lowest_word_count(self, vocab_ex):
         """Among started topics, picks the one with the fewest words."""
-        state = vocab_ex._load_state()
+        state = load_vocab_state("vocab")
         state.topics["greetings"]["started"] = True
         state.topics["greetings"]["word_count"] = 10
         state.topics["family"]["started"] = True
@@ -300,14 +268,14 @@ class TestFallbackMessage:
         """When _pick_words returns [], run() sends the Russian fallback."""
 
         class EmptyPickExercise(VocabExercise):
-            def _load_state(self):
-                return VocabState(vocab=_make_vocab(3, is_learning=False), word_bank={}, topics={})
             def _replenish_pool(self, state):
                 pass
 
+        canned = VocabState(vocab=_make_vocab(3, is_learning=False), word_bank={}, topics={})
         ex = EmptyPickExercise()
-        channel = _RecordingChannel()
-        with patch("random.random", return_value=1.0):
+        channel = RecordingChannel()
+        with patch("exercises.vocab.exercise.load_vocab_state", return_value=canned), \
+             patch("random.random", return_value=1.0):
             asyncio.run(ex.run(channel, UserProfile()))
 
         assert len(channel.sent) == 1
@@ -323,7 +291,7 @@ class TestFallbackMessage:
 class TestFlashcardFormat:
     def test_output_format_and_word_count(self, vocab_ex):
         """Message is Markdown with em-dash pairs and exactly WORDS_PER_SESSION lines."""
-        channel = _RecordingChannel()
+        channel = RecordingChannel()
         asyncio.run(vocab_ex.run(channel, UserProfile()))
 
         assert len(channel.sent) == 1
@@ -344,7 +312,7 @@ class TestFlashcardFormat:
 class TestStatePersistence:
     def test_state_survives_across_runs(self, tmp_path, vocab_ex):
         """State round-trips correctly: times_shown increments, no duplicates, topics persisted."""
-        asyncio.run(vocab_ex.run(_RecordingChannel(), UserProfile()))
+        asyncio.run(vocab_ex.run(RecordingChannel(), UserProfile()))
 
         vocab_dir = tmp_path / "vocab"
         after_first = json.loads((vocab_dir / STATE_FILE).read_text(encoding="utf-8"))
@@ -352,7 +320,7 @@ class TestStatePersistence:
         assert any(w["times_shown"] == 1 for w in after_first.values())
 
         # Second run — no duplicates, times_shown increases
-        asyncio.run(vocab_ex.run(_RecordingChannel(), UserProfile()))
+        asyncio.run(vocab_ex.run(RecordingChannel(), UserProfile()))
         after_second = json.loads((vocab_dir / STATE_FILE).read_text(encoding="utf-8"))
         assert len(after_second) == len(after_first)
         sum_first = sum(w["times_shown"] for w in after_first.values())
@@ -371,7 +339,7 @@ class TestStatePersistence:
 
         with patch("pathlib.Path.replace", side_effect=OSError("disk full")):
             with pytest.raises(OSError):
-                vocab_ex._atomic_write(target, {"hello": "world"})
+                atomic_write(target, {"hello": "world"})
 
         assert not tmp_file.exists()
 
@@ -419,7 +387,7 @@ class TestDifficultyFiltering:
         The seed has words at A2-3 (ordinal 8), B1-3, and B2-3 — all out of window.
         None of those should appear in the persisted word bank.
         """
-        vocab_ex._load_state()
+        load_vocab_state("vocab")
 
         word_bank_path = tmp_path / "vocab" / WORD_BANK_FILE
         assert word_bank_path.exists()

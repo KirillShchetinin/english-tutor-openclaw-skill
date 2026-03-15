@@ -1,37 +1,28 @@
 from __future__ import annotations
 
-import json
-import logging
 import random
-from dataclasses import dataclass
 from datetime import datetime, timezone
-from pathlib import Path
 
 from channels.base import OutputChannel
 from models import Message, StudentLevel, UserProfile
-from config import get_data_path, get_student_level
+from config import get_student_level
 from messages import VOCAB_EMPTY, VOCAB_HEADER, VOCAB_RECALL_HINT
 from exercises.base import Exercise, RunResult
 from exercises.registry import register_exercise
+from exercises.vocab.helpers import (
+    VocabState,
+    load_vocab_state,
+    save_vocab_state,
+)
+
+import logging
 
 logger = logging.getLogger(__name__)
 
 ACTIVE_POOL_SIZE = 50
 WORDS_PER_SESSION = 10
-GRADUATION_SHOW_COUNT = 8
 REVIEW_PROBABILITY = 0.2
 TOPIC_FULL_THRESHOLD = 30
-
-STATE_FILE = "state.json"
-WORD_BANK_FILE = "word_bank.json"
-TOPICS_FILE = "topics.json"
-
-
-@dataclass
-class VocabState:
-    vocab: dict       # word -> word entry dict
-    word_bank: dict   # topic -> list of word entries
-    topics: dict      # topic -> {word_count, started}
 
 
 @register_exercise
@@ -41,95 +32,28 @@ class VocabExercise(Exercise):
         return "vocab"
 
     async def run(self, channel: OutputChannel, profile: UserProfile) -> RunResult:
-        state = self._load_state()
+        state = load_vocab_state(self.name)
         self._replenish_pool(state)
         words = self._pick_words(state)
 
         if not words:
-            try:
-                await channel.send(
-                    Message(
-                        type="text",
-                        content=VOCAB_EMPTY,
-                    )
+            await channel.send(
+                Message(
+                    type="text",
+                    content=VOCAB_EMPTY,
                 )
-            except Exception:
-                logger.exception("Failed to send vocab empty message")
-                return RunResult(completed=False, reason="channel send failed")
+            )
             return RunResult(completed=True)
 
-        try:
-            for msg in self._format(words):
-                await channel.send(msg)
-        except Exception:
-            logger.exception("Failed to send vocab content")
-            return RunResult(completed=False, reason="channel send failed")
+        for msg in self._format(words):
+            await channel.send(msg)
 
         try:
             self._update_state(state, words)
-            self._save_state(state)
+            save_vocab_state(self.name, state)
         except Exception:
             logger.exception("Failed to save vocab state; delivering words anyway")
         return RunResult(completed=True)
-
-    def _load_state(self) -> VocabState:
-        data_dir = get_data_path() / self.name
-        data_dir.mkdir(parents=True, exist_ok=True)
-
-        # Word bank
-        word_bank_path = data_dir / WORD_BANK_FILE
-        # Known limitation: existing word_bank.json files from before difficulty
-        # filtering are not retroactively filtered. The belt-and-suspenders check
-        # in _replenish_pool handles this at the pool level.
-        if not word_bank_path.exists():
-            self._init_word_bank(word_bank_path)
-        word_bank = json.loads(word_bank_path.read_text(encoding="utf-8"))
-
-        # Topics
-        topics_path = data_dir / TOPICS_FILE
-        if not topics_path.exists():
-            topics = {
-                topic: {"word_count": 0, "started": False}
-                for topic in word_bank
-            }
-        else:
-            topics = json.loads(topics_path.read_text(encoding="utf-8"))
-
-        # Vocab state
-        state_path = data_dir / STATE_FILE
-        if not state_path.exists():
-            vocab = {}
-        else:
-            vocab = json.loads(state_path.read_text(encoding="utf-8"))
-
-        return VocabState(vocab=vocab, word_bank=word_bank, topics=topics)
-
-    def _init_word_bank(self, word_bank_path: Path) -> None:
-        seed_path = Path(__file__).parent / "data" / "word_bank_seed.json"
-        seed = json.loads(seed_path.read_text(encoding="utf-8"))
-        level = get_student_level()
-        low, high = level.difficulty_window()
-        filtered: dict[str, list] = {}
-        for topic, words in seed.items():
-            kept = []
-            for word in words:
-                try:
-                    word_level = StudentLevel.parse(word["difficulty"])
-                except (ValueError, KeyError):
-                    continue
-                if low <= word_level <= high:
-                    kept.append(word)
-            filtered[topic] = kept
-        total_words = sum(len(ws) for ws in filtered.values())
-        if total_words == 0:
-            raise RuntimeError(
-                f"Filtered word bank is empty — student level {level} "
-                "has no matching words in the seed. Check config.json."
-            )
-        word_bank_path.write_text(
-            json.dumps(filtered, indent=2, ensure_ascii=False),
-            encoding="utf-8",
-        )
 
     def _replenish_pool(self, state: VocabState) -> None:
         active_count = sum(1 for w in state.vocab.values() if w["is_learning"])
@@ -237,28 +161,3 @@ class VocabExercise(Exercise):
             if key in state.vocab:
                 state.vocab[key]["times_shown"] += 1
                 state.vocab[key]["last_seen"] = now
-        self._check_graduations(state.vocab)
-
-    def _check_graduations(self, vocab: dict) -> None:
-        for word in vocab.values():
-            if word["is_learning"] and word["times_shown"] >= GRADUATION_SHOW_COUNT:
-                word["is_learning"] = False
-
-    def _save_state(self, state: VocabState) -> None:
-        data_dir = get_data_path() / self.name
-        data_dir.mkdir(parents=True, exist_ok=True)
-        self._atomic_write(data_dir / STATE_FILE, state.vocab)
-        self._atomic_write(data_dir / TOPICS_FILE, state.topics)
-
-    def _atomic_write(self, path: Path, data: dict) -> None:
-        # Write to .tmp first, then replace — avoids corrupted files on crash.
-        tmp = path.with_suffix(".tmp")
-        try:
-            tmp.write_text(
-                json.dumps(data, indent=2, ensure_ascii=False),
-                encoding="utf-8",
-            )
-            tmp.replace(path)
-        except Exception:
-            tmp.unlink(missing_ok=True)
-            raise

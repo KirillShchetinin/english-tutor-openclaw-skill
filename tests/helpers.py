@@ -13,8 +13,10 @@ class RecordingChannel(OutputChannel):
         self.sent: list[Message] = []
         self.done_statuses: list[str] = []
 
-    async def send(self, message: Message) -> None:
+    async def send(self, message: Message) -> str | None:
+        token = f"msg-{len(self.sent)}"
         self.sent.append(message)
+        return token
 
     async def done(self, status: str = "ok", **_kwargs) -> None:
         self.done_statuses.append(status)
